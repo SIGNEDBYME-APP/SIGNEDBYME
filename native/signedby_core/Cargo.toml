@@ -1,0 +1,90 @@
+[package]
+name = "signedby-sdk"
+version = "0.1.0"
+edition = "2021"
+description = "SIGNEDBYME SDK - Human-controlled identity for autonomous agents"
+license = "LicenseRef-SSAL-1.0"
+# license-file removed - causes issues with maturin builds
+repository = "https://github.com/SIGNEDBYME-APP/SIGNEDBYME"
+homepage = "https://signedbyme.com"
+documentation = "https://signedbyme.com/docs"
+readme = "README.md"
+keywords = ["identity", "zk-proofs", "nostr", "bitcoin", "authentication"]
+categories = ["authentication", "cryptography"]
+
+[lib]
+name = "signedby_sdk"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# CLI argument parsing
+clap = { version = "4.4", features = ["derive"] }
+anyhow = "1"
+
+# NOTE: jni removed per Bible Section 16 (Mar 30, 2026).
+# Mobile Android bridge superseded. This is an SDK, not an Android app.
+
+# Cryptographic primitives
+sha2 = "0.10"
+hex = "0.4"
+k256 = { version = "0.13", features = ["ecdsa", "schnorr"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
+getrandom = { version = "0.2" }
+
+# Arkworks for Groth16 / BN254 operations
+ark-ff = "0.4.1"
+ark-bn254 = "0.4.0"
+ark-ec = "0.4.1"
+ark-std = "0.4.0"
+ark-groth16 = "0.4.0"
+ark-snark = "0.4.0"
+ark-serialize = "0.4.1"
+
+# Utilities
+thiserror = "1.0"
+once_cell = "1.18"
+libc = "0.2"  # For dlopen/dlsym (witness calculator loading)
+
+# Bitcoin / Schnorr / Taproot
+secp256k1 = { version = "0.28", features = ["rand-std", "global-context"] }
+bitcoin = { version = "0.31", features = ["rand-std"] }
+
+# NOTE: lightning-invoice removed per Bible Section 16 (Mar 30, 2026).
+# Only used by superseded JNI functions.
+
+# Base64 encoding
+base64 = "0.21"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# NOSTR (Phase 9)
+nostr-sdk = "0.35.0"  # Full NOSTR library
+nwc = "0.35.0"  # NIP-47 Nostr Wallet Connect
+tokio = { version = "1", features = ["rt-multi-thread", "sync"] }  # Async runtime for nostr-sdk
+
+# HTTP client for API calls (Phase 9A.4)
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+
+# SDK encrypted storage (Phase 9A)
+chacha20poly1305 = "0.10"
+keyring = "2"  # OS keyring (macOS Keychain, Windows DPAPI, Linux Secret Service)
+dirs = "5"  # Cross-platform directory paths (for FFI default storage)
+
+# Note: WASM witness calculation requires either:
+# - circom-witnesscalc (needs protoc + clang)
+# - wasmer/wasmtime (complex Android support)
+# Current approach: Call external witness calculator binary
+num-bigint = "0.4"
+
+[features]
+default = []
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1

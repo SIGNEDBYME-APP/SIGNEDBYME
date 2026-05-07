@@ -1,0 +1,71 @@
+{
+  "name": "@signedby/sdk",
+  "version": "0.1.0",
+  "description": "SIGNEDBYME SDK - Human-controlled identity for autonomous agents",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "test": "vitest",
+    "lint": "eslint src/",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "signedby",
+    "identity",
+    "zk-proofs",
+    "zero-knowledge",
+    "nostr",
+    "bitcoin",
+    "lightning",
+    "authentication",
+    "oidc",
+    "did"
+  ],
+  "author": "SIGNEDBYME <contact@signedbyme.com>",
+  "license": "SSAL-1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SIGNEDBYME-APP/SIGNEDBYME.git",
+    "directory": "sdk/typescript"
+  },
+  "homepage": "https://signedbyme.com",
+  "bugs": {
+    "url": "https://github.com/SIGNEDBYME-APP/SIGNEDBYME/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "tsup": "^8.2.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  },
+  "dependencies": {
+    "@noble/curves": "^1.6.0",
+    "@noble/hashes": "^1.5.0"
+  },
+  "optionalDependencies": {
+    "@signedby/core-linux-x64-gnu": "0.1.0",
+    "@signedby/core-linux-arm64-gnu": "0.1.0",
+    "@signedby/core-darwin-x64": "0.1.0",
+    "@signedby/core-darwin-arm64": "0.1.0",
+    "@signedby/core-win32-x64-msvc": "0.1.0"
+  }
+}

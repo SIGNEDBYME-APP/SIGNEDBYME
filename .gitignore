@@ -1,0 +1,74 @@
+# Secrets / runtime
+keys/
+var/
+**/*.db
+.venv/
+__pycache__/
+*.pyc
+app/var/
+
+# Client configuration (use clients.json.example as template)
+clients.json
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Android / Gradle (mobile superseded)
+.gradle/
+build/
+**/build/
+local.properties
+.local.properties
+.cxx/
+.cinterop/
+captures/
+.externalNativeBuild/
+.idea/
+.kotlinc/
+.ksp/
+*.iml
+gradle/
+gradlew
+gradlew.bat
+gradle.properties
+*.gradle.kts
+
+# iOS / Xcode (mobile superseded)
+DID_BTC/
+*.xcodeproj/
+*.xcworkspace/
+*.pbxproj
+*-Bridging-Header.h
+Pods/
+
+# Kotlin build artifacts
+.kotlin/
+
+# NDK / JNI
+app/src/main/obj/
+
+# macOS
+**/.DS_Store
+
+# OIDC keys (never commit)
+keys/oidc_rs256.pem
+
+# Screenshots
+Screenshot*.png
+
+# Node modules
+node_modules/
+
+# SDK build artifacts
+sdk/rust/target/
+sdk/python/target/
+sdk/typescript/node_modules/
+sdk/typescript/dist/
+native/signedby_core/target/
+
+# Keep circuit build outputs
+!circuits/build/verification_key_final.json
+!circuits/build/membership_cpp/
+!circuits/build/.gitignore

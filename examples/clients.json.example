@@ -1,0 +1,25 @@
+{
+  "_comment": "require_membership defaults to TRUE if not specified. Set to false to opt-out.",
+  
+  "acme_corp": {
+    "api_key": "acme_sk_test_abc123",
+    "client_secret": "acme_secret_xyz789",
+    "name": "Acme Corporation",
+    "redirect_uris": ["https://acme.com/callback"],
+    "ea_domain": "acme.com",
+    "require_membership": false,
+    "allowed_purposes": ["allowlist", "issuer_batch"],
+    "default_root_id": null,
+    "_note": "This client has membership DISABLED (opt-out)"
+  },
+  "secure_bank": {
+    "api_key": "secbank_sk_test_xyz789",
+    "client_secret": "secbank_secret_xyz789",
+    "name": "Secure Bank",
+    "redirect_uris": ["https://securebank.com/oauth/callback"],
+    "ea_domain": "securebank.com",
+    "allowed_purposes": ["allowlist"],
+    "default_root_id": "allowlist-dev-001",
+    "_note": "This client uses default (require_membership: true)"
+  }
+}
