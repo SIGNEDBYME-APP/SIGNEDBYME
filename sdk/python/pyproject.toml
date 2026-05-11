@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "signedby"
-version = "0.1.0"
+version = "1.0.0"
 description = "SIGNEDBYME SDK - Self-signing digital signatures with zero-knowledge proofs"
 readme = "README.md"
 license = { text = "SSAL-1.0" }
@@ -19,7 +19,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Rust",
-    "License :: OSI Approved :: MIT License",
+    "License :: Other/Proprietary License",
     "Topic :: Security :: Cryptography",
 ]
 keywords = ["identity", "zkp", "groth16", "nostr", "bitcoin", "authentication"]
@@ -27,7 +27,7 @@ requires-python = ">=3.9"
 
 [project.urls]
 Homepage = "https://signedbyme.com"
-Documentation = "https://docs.signedbyme.com"
+Documentation = "https://signedbyme.com/docs/sdk-quickstart.html"
 Repository = "https://github.com/SIGNEDBYME-APP/SIGNEDBYME"
 
 [tool.maturin]
