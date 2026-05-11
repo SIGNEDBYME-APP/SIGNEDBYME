@@ -3,7 +3,7 @@
 //! Provides Groth16 proof verification and OIDC token validation for Python.
 
 use pyo3::prelude::*;
-use pyo3::exceptions::{PyValueError, PyRuntimeError};
+use pyo3::exceptions::PyValueError;
 use pyo3::types::PyDict;
 
 /// Convert hex public key to bech32 npub format
@@ -55,7 +55,7 @@ fn verify_proof(py: Python<'_>, proof_json: &str, public_inputs_json: &str, _vk_
     let npub = hex_to_npub(&npub_hex[..64.min(npub_hex.len())])?;
     
     // Build result dict
-    let dict = PyDict::new(py);
+    let dict = PyDict::new_bound(py);
     dict.set_item("valid", true)?;  // Note: actual verification requires arkworks
     dict.set_item("npub", npub)?;
     dict.set_item("npub_hex", &npub_hex)?;
@@ -86,7 +86,7 @@ fn decode_token_claims(py: Python<'_>, token: &str) -> PyResult<PyObject> {
         .map_err(|e| PyValueError::new_err(format!("JSON parse failed: {}", e)))?;
     
     // Convert to Python dict
-    let dict = PyDict::new(py);
+    let dict = PyDict::new_bound(py);
     if let serde_json::Value::Object(map) = claims {
         for (k, v) in map {
             match v {
@@ -116,7 +116,7 @@ fn decode_token_claims(py: Python<'_>, token: &str) -> PyResult<PyObject> {
 ///     npub = hex_to_npub("0123456789abcdef" * 4)
 ///     result = verify_proof(proof_json, public_inputs_json, vk_json)
 #[pymodule]
-fn signedby(_py: Python, m: &PyModule) -> PyResult<()> {
+fn signedby(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(hex_to_npub, m)?)?;
     m.add_function(wrap_pyfunction!(npub_to_hex, m)?)?;
     m.add_function(wrap_pyfunction!(verify_proof, m)?)?;
