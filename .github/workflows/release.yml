@@ -62,7 +62,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       
       - name: Publish
-        working-directory: sdk/rust
+        working-directory: native/signedby_core
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
         run: cargo publish
