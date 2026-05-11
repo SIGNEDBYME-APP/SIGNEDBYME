@@ -1,12 +1,13 @@
 [package]
 name = "signedby-sdk"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 authors = ["SIGNEDBYME <contact@signedbyme.com>"]
 description = "SIGNEDBYME SDK - Self-signing digital signatures with zero-knowledge proofs"
 license = "SSAL-1.0"
 repository = "https://github.com/SIGNEDBYME-APP/SIGNEDBYME"
-documentation = "https://docs.signedbyme.com"
+homepage = "https://signedbyme.com"
+documentation = "https://signedbyme.com/docs/sdk-quickstart"
 keywords = ["identity", "zkp", "groth16", "nostr", "bitcoin"]
 categories = ["authentication", "cryptography"]
 readme = "README.md"
