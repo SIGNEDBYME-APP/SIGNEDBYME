@@ -39,7 +39,7 @@ println!("Verified: sub={}", result.id_token.sub);
 
 ## Documentation
 
-Full documentation: [https://docs.signedbyme.com](https://docs.signedbyme.com)
+Full documentation: [https://signedbyme.com/docs/sdk-quickstart.html](https://signedbyme.com/docs/sdk-quickstart.html)
 
 ## License
 

@@ -1,8 +1,8 @@
 [package]
 name = "signedby-python"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
-description = "Python bindings for SIGNEDBYME SDK"
+description = "SIGNEDBYME SDK - Human-Controlled Identity for Autonomous Agents"
 license = "LicenseRef-SSAL-1.0"
 repository = "https://github.com/SIGNEDBYME-APP/SIGNEDBYME"
 homepage = "https://signedbyme.com"

@@ -4,8 +4,8 @@ build-backend = "maturin"
 
 [project]
 name = "signedby"
-version = "1.0.0"
-description = "SIGNEDBYME SDK - Self-signing digital signatures with zero-knowledge proofs"
+version = "1.0.1"
+description = "SIGNEDBYME SDK - Human-Controlled Identity for Autonomous Agents"
 readme = "README.md"
 license = { text = "SSAL-1.0" }
 authors = [
