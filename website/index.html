@@ -447,9 +447,9 @@ token = await client.login(
             
             <div class="download-box">
                 <div class="download-info">
-                    <h3>signedby-sdk-v0.1.0</h3>
+                    <h3>signedby-sdk-v1.0.1</h3>
                     <p class="download-meta">
-                        Latest release · Rust core + language bindings
+                        Latest release · Native SDK with Groth16 prover
                     </p>
                 </div>
                 <a href="https://github.com/SIGNEDBYME-APP/SIGNEDBYME/releases/latest" 
@@ -458,11 +458,18 @@ token = await client.login(
                 </a>
             </div>
             
+            <div class="direct-downloads">
+                <h4>Direct Downloads (CDN)</h4>
+                <ul>
+                    <li><a href="https://signedby-assets.atl1.cdn.digitaloceanspaces.com/groth16/membership_final.zkey">membership_final.zkey</a> (84 MB) — Groth16 prover key</li>
+                    <li><a href="https://signedby-assets.atl1.cdn.digitaloceanspaces.com/groth16/verification_key_final.json">verification_key_final.json</a> (4 KB) — Verifier key</li>
+                </ul>
+            </div>
+            
             <div class="checksum">
                 <h4>Verify Download</h4>
-                <p>Compare the SHA-256 hash to ensure integrity:</p>
-                <code class="hash">sha256sum signedby-sdk-v0.1.0.tar.gz</code>
-                <code class="hash-value">[SHA-256 hash will be displayed here after release]</code>
+                <p>Each release includes SHA256SUMS.txt. Verify with:</p>
+                <code class="hash">sha256sum -c SHA256SUMS.txt</code>
             </div>
         </div>
     </section>
