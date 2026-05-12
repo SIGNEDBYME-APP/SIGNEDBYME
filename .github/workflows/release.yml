@@ -5,64 +5,187 @@ on:
     tags:
       - 'v*'
 
+env:
+  ZKEY_URL: https://signedby-assets.atl1.cdn.digitaloceanspaces.com/groth16/membership_final.zkey
+  VK_URL: https://signedby-assets.atl1.cdn.digitaloceanspaces.com/groth16/verification_key_final.json
+
 jobs:
+  # Build native SDK bundles for each platform
+  build-native:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-x64
+            os: ubuntu-latest
+            rapidsnark_target: host
+          - target: linux-arm64
+            os: ubuntu-latest
+            rapidsnark_target: host_arm64
+          - target: macos-arm64
+            os: macos-latest
+            rapidsnark_target: macos_arm64
+          - target: macos-x64
+            os: macos-13
+            rapidsnark_target: macos_x86_64
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake libgmp-dev nasm nlohmann-json3-dev
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install gmp nlohmann-json nasm cmake
+
+      - name: Build rapidsnark
+        working-directory: native/rapidsnark
+        run: |
+          make ${{ matrix.rapidsnark_target }}
+
+      - name: Build witness calculator
+        working-directory: circuits/build/membership_cpp
+        run: |
+          make
+
+      - name: Download zkey from CDN
+        run: |
+          mkdir -p dist
+          curl -L -o dist/membership_final.zkey ${{ env.ZKEY_URL }}
+          curl -L -o dist/verification_key_final.json ${{ env.VK_URL }}
+
+      - name: Collect artifacts
+        run: |
+          # Copy native libraries
+          if [ "${{ matrix.target }}" = "linux-x64" ]; then
+            cp native/rapidsnark/package/lib/librapidsnark.so dist/ || cp native/rapidsnark/build_prover/src/librapidsnark.so dist/
+            cp circuits/build/membership_cpp/libmembership_witness.so dist/ || cp circuits/build/membership_cpp/membership dist/membership_witness
+          elif [ "${{ matrix.target }}" = "linux-arm64" ]; then
+            cp native/rapidsnark/package_arm64/lib/librapidsnark.so dist/ || cp native/rapidsnark/build_prover_arm64/src/librapidsnark.so dist/
+            cp circuits/build/membership_cpp/libmembership_witness.so dist/ || cp circuits/build/membership_cpp/membership dist/membership_witness
+          elif [ "${{ matrix.target }}" = "macos-arm64" ]; then
+            cp native/rapidsnark/package_macos_arm64/lib/librapidsnark.dylib dist/ || cp native/rapidsnark/build_prover_macos_arm64/src/librapidsnark.dylib dist/
+            cp circuits/build/membership_cpp/membership dist/membership_witness
+          elif [ "${{ matrix.target }}" = "macos-x64" ]; then
+            cp native/rapidsnark/package_macos_x86_64/lib/librapidsnark.dylib dist/ || cp native/rapidsnark/build_prover_macos_x86_64/src/librapidsnark.dylib dist/
+            cp circuits/build/membership_cpp/membership dist/membership_witness
+          fi
+          
+          # Copy witness data
+          cp circuits/build/membership_cpp/membership.dat dist/ || true
+          
+          # Create checksums
+          cd dist
+          sha256sum * > SHA256SUMS.txt || shasum -a 256 * > SHA256SUMS.txt
+
+      - name: Create ZIP
+        run: |
+          cd dist
+          zip -r ../signedby-sdk-${{ matrix.target }}-${{ github.ref_name }}.zip .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: signedby-sdk-${{ matrix.target }}
+          path: signedby-sdk-${{ matrix.target }}-${{ github.ref_name }}.zip
+
+  # Create GitHub Release with all artifacts
+  release:
+    name: Create Release
+    needs: build-native
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: find artifacts -type f
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/**/*.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Publish SDK packages to registries
   publish-pypi:
     name: Publish to PyPI
+    needs: release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+
       - name: Install maturin
         run: pip install maturin
-      
+
       - name: Build and publish
         working-directory: sdk/python
         env:
           MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: maturin publish
+        continue-on-error: true  # Don't fail if version already exists
 
   publish-npm:
     name: Publish to npm
+    needs: release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
-      
+
       - name: Install dependencies
         working-directory: sdk/typescript
         run: npm install
-      
+
       - name: Build
         working-directory: sdk/typescript
         run: npm run build
-      
+
       - name: Publish
         working-directory: sdk/typescript
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public
+        continue-on-error: true  # Don't fail if version already exists
 
   publish-crates:
     name: Publish to crates.io
+    needs: release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
-      
+
       - name: Publish
         working-directory: native/signedby_core
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
         run: cargo publish
+        continue-on-error: true  # Don't fail if version already exists
