@@ -47,6 +47,11 @@ jobs:
         run: |
           brew install gmp nlohmann-json nasm cmake
 
+      - name: Build GMP for rapidsnark
+        working-directory: native/rapidsnark
+        run: |
+          ./build_gmp.sh ${{ matrix.rapidsnark_target }}
+
       - name: Build rapidsnark
         working-directory: native/rapidsnark
         run: |
