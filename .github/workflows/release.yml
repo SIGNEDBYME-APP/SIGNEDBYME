@@ -21,16 +21,15 @@ jobs:
           - target: linux-x64
             os: ubuntu-latest
             rapidsnark_target: host
-          # TODO: Re-enable after fixing GMP build for macOS
-          # - target: linux-arm64
-          #   os: ubuntu-latest
-          #   rapidsnark_target: host_arm64
-          # - target: macos-arm64
-          #   os: macos-latest
-          #   rapidsnark_target: macos_arm64
-          # - target: macos-x64
-          #   os: macos-13
-          #   rapidsnark_target: macos_x86_64
+          - target: linux-arm64
+            os: ubuntu-latest
+            rapidsnark_target: host_arm64
+          - target: macos-arm64
+            os: macos-latest
+            rapidsnark_target: macos_arm64
+          - target: macos-x64
+            os: macos-13
+            rapidsnark_target: macos_x86_64
 
     steps:
       - uses: actions/checkout@v4
@@ -47,6 +46,20 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew install gmp nlohmann-json nasm cmake
+
+      - name: Setup GMP for rapidsnark (macOS)
+        if: runner.os == 'macOS'
+        working-directory: native/rapidsnark
+        run: |
+          mkdir -p depends/gmp/package_${{ matrix.rapidsnark_target }}/lib
+          mkdir -p depends/gmp/package_${{ matrix.rapidsnark_target }}/include
+          if [ "${{ matrix.rapidsnark_target }}" = "macos_arm64" ]; then
+            cp /opt/homebrew/lib/libgmp.a depends/gmp/package_macos_arm64/lib/
+            cp /opt/homebrew/include/gmp.h depends/gmp/package_macos_arm64/include/
+          else
+            cp /usr/local/lib/libgmp.a depends/gmp/package_macos_x86_64/lib/
+            cp /usr/local/include/gmp.h depends/gmp/package_macos_x86_64/include/
+          fi
 
       - name: Build rapidsnark
         working-directory: native/rapidsnark
