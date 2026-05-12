@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIGNEDBYME | Human-Controlled Identity for Autonomous Agents</title>
+    <meta name="description" content="Human-controlled cryptographic identity for AI agents. Zero-knowledge proofs. Bitcoin-backed. Instant revocation.">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-container">
+            <a href="#" class="nav-logo">
+                <span class="logo-text brand-name">SIGNEDBYME</span>
+            </a>
+            <button class="nav-toggle" aria-label="Toggle navigation" onclick="document.querySelector('.nav-links').classList.toggle('nav-open')">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <div class="nav-links">
+                <a href="#how-it-works">How It Works</a>
+                <a href="#for-humans">For Humans</a>
+                <a href="#for-agents">For Agents</a>
+                <a href="#for-enterprises">For Enterprises</a>
+                <a href="#demo">Live Feed</a>
+                <a href="#pricing">Pricing</a>
+                <a href="#download" class="nav-cta">Download SDK</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>Human-Controlled Identity for <span class="highlight">Autonomous Agents</span></h1>
+        </div>
+    </section>
+
+    <!-- What Is SIGNEDBYME -->
+    <section id="how-it-works" class="section">
+        <div class="container">
+            <h2>What is <span class="brand-name">SIGNEDBYME</span>?</h2>
+            
+            <div class="intro-text">
+                <p>
+                    Agents are flooding the internet with borrowed credentials, escalated privileges 
+                    and no way to cryptographically log in with their own identity. The result: 
+                    every autonomous agent breaks the cryptographic blood brain barrier and becomes a potential threat.
+                </p>
+                <p>
+                    <strong><span class="brand-name">SIGNEDBYME</span> fixes this by delivering cryptographic control through 
+                    a human-signed delegation event.</strong>
+                </p>
+            </div>
+            
+            <h3>Built on Three Cryptographic Pillars</h3>
+            <p class="subsection-intro"><span class="brand-name">SIGNEDBYME</span> is built on three unchangeable foundations:</p>
+            
+            <div class="pillars-grid">
+                <div class="pillar-card">
+                    <h4>Self-Signing Identity</h4>
+                    <p>
+                        Every agent has a cryptographic identity created in secure storage. 
+                        The key never leaves the agent. No certificate authority. No enterprise control. 
+                        Only the human owner can revoke.
+                    </p>
+                    <a href="https://github.com/SIGNEDBYME-APP/SIGNEDBYME/blob/main/native/signedby_core/src/sdk/identity.rs" class="pillar-link">Don't trust, verify →</a>
+                </div>
+                
+                <div class="pillar-card">
+                    <h4>Zero-Knowledge Membership Proof</h4>
+                    <p>
+                        The agent proves it belongs to an authorized group without revealing 
+                        which agent it is. Enterprise gets a boolean: authorized or not. 
+                        No identity revealed.
+                    </p>
+                    <a href="https://github.com/SIGNEDBYME-APP/SIGNEDBYME/blob/main/circuits/membership.circom" class="pillar-link">Don't trust, verify →</a>
+                </div>
+                
+                <div class="pillar-card">
+                    <h4>Bitcoin-Backed Economic Proof</h4>
+                    <p>
+                        Real Bitcoin payment required to create each agent identity. 
+                        Economic commitment and cryptographic identity are fused together. 
+                        Cannot create agent identities without paying real Bitcoin.
+                    </p>
+                    <a href="https://github.com/SIGNEDBYME-APP/SIGNEDBYME/blob/main/app/routes/login.py" class="pillar-link">Don't trust, verify →</a>
+                </div>
+            </div>
+            
+            <h3>Delivering Five Security Guarantees</h3>
+            <p class="subsection-intro">These foundations enable five layers of protection:</p>
+            
+            <div class="guarantees-grid">
+                <div class="guarantee-card">
+                    <h4>Agent cannot fake identity</h4>
+                    <p>Agent's public key is a mathematical output of the ZK proof, not a claim. Faking requires breaking the proof system.</p>
+                    <a href="https://github.com/SIGNEDBYME-APP/SIGNEDBYME/blob/main/circuits/membership.circom" class="pillar-link">Don't trust, verify →</a>
+                </div>
+                <div class="guarantee-card">
+                    <h4>Agent cannot exceed permissions</h4>
+                    <p>Human owner digitally signs what the agent is authorized to do. Agent cannot claim broader access than granted.</p>
+                    <a href="https://github.com/SIGNEDBYME-APP/SIGNEDBYME/blob/main/app/routes/enroll.py" class="pillar-link">Don't trust, verify →</a>
+                </div>
+                <div class="guarantee-card">
+                    <h4>Human keeps instant kill switch</h4>
+                    <p>Human publishes a revocation event to instantly lock out the agent. No IT tickets. Cryptographic revocation in seconds.</p>
+                    <a href="https://github.com/SIGNEDBYME-APP/SIGNEDBYME/blob/main/app/lib/nostr.py" class="pillar-link">Don't trust, verify →</a>
+                </div>
+                <div class="guarantee-card">
+                    <h4>Enterprise controls access boundaries</h4>
+                    <p>Agent can only authenticate where it was enrolled. Cannot self-enroll or access unapproved services.</p>
+                    <a href="https://github.com/SIGNEDBYME-APP/SIGNEDBYME/blob/main/app/routes/enroll.py" class="pillar-link">Don't trust, verify →</a>
+                </div>
+                <div class="guarantee-card">
+                    <h4>Fully auditable without trust</h4>
+                    <p>Complete trail on public NOSTR relays. Security teams verify independently.</p>
+                    <a href="https://github.com/SIGNEDBYME-APP/SIGNEDBYME/blob/main/app/lib/nostr.py" class="pillar-link">Don't trust, verify →</a>
+                </div>
+            </div>
+            
+            <h3>The Result</h3>
+            <p class="subsection-intro"><span class="brand-name">SIGNEDBYME</span> delivers enterprise-grade identity management without the enterprise overhead:</p>
+            
+            <div class="result-cards">
+                <div class="result-card">
+                    <h4>For Humans</h4>
+                    <p>
+                        Complete cryptographic control over agent behavior. Grant specific permissions. 
+                        Revoke instantly from anywhere. No IT tickets. No admin approval. Your cryptographic signature is the 
+                        only authority that matters.
+                    </p>
+                </div>
+                
+                <div class="result-card">
+                    <h4>For Agents</h4>
+                    <p>
+                        Real cryptographic identity that can't be borrowed, shared, or faked. 
+                        Authenticate independently without depending on human credentials or shared service accounts.
+                    </p>
+                </div>
+                
+                <div class="result-card">
+                    <h4>For Enterprises</h4>
+                    <p>
+                        Drop-in OIDC-compatible authentication. No new infrastructure. 
+                        No user management. No password policies. Agents authenticate directly and return standard OIDC tokens 
+                        your existing systems already understand. Your IAM policies work unchanged. <span class="brand-name">SIGNEDBYME</span> just handles 
+                        the "who is this agent?" question cryptographically.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="guarantee-banner">
+                <h3>The Mathematical Guarantee</h3>
+                <p>
+                    Every agent identity is cryptographically bound to a real Bitcoin payment. 
+                    The subscription preimage is fused into the agent's DID at creation. 
+                    No payment, no identity. Unforgeable.
+                </p>
+                <p>
+                    The human owner signs the delegation. The human can revoke it. 
+                    No admin portal. No IT ticket. One NOSTR event and the agent is locked out.
+                </p>
+                <p>
+                    Groth16 proves membership. Poseidon2 derives the keys. secp256k1 signs the events. 
+                    The same cryptography that secures Bitcoin secures your agent.
+                </p>
+                <p>
+                    When an enterprise receives an OIDC token from <span class="brand-name">SIGNEDBYME</span>, 
+                    they're not trusting a policy. They're trusting math.
+                </p>
+                <p class="guarantee-tagline">
+                    <strong>Not a promise. A proof.</strong>
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- For Humans (Agent Owners) -->
+    <section id="for-humans" class="section section-alt">
+        <div class="container">
+            <h2>For Humans</h2>
+            <p class="section-intro">
+                Your AI agent needs cryptographic identity to act on your behalf. 
+                <span class="brand-name">SIGNEDBYME</span> puts you in control: you sign the delegation, 
+                you set the permissions, you hold the kill switch.
+            </p>
+            
+            <h3>How It Works for You</h3>
+            <div class="agent-flow">
+                <p>
+                    <strong>1. Get your NOSTR keys.</strong><br>
+                    Download a NOSTR client (Damus, Primal, Amethyst). Your keys are generated automatically. 
+                    Your <code>npub</code> is your public identity. Your <code>nsec</code> is your signing key — never share it.
+                </p>
+                <p>
+                    <strong>2. Install and configure your agent.</strong><br>
+                    Install the <span class="brand-name">SIGNEDBYME</span> SDK (<code>pip install signedby</code>). 
+                    Initialize your agent and configure which email you use at each enterprise.
+                </p>
+                <p>
+                    <strong>3. Authorize your agent.</strong><br>
+                    Log into an enterprise, click "Authorize an Agent," and enter the challenge code into your agent. 
+                    Sign the delegation event with your NOSTR client. Your agent handles the rest.
+                </p>
+                <p>
+                    <strong>4. Stay in control.</strong><br>
+                    Monitor your agent's activity on any NOSTR client. Revoke access instantly by publishing 
+                    a single event. Renew delegations before they expire. Pay $12/month in BTC.
+                </p>
+            </div>
+            
+            <div class="doc-grid">
+                <h3>Documentation</h3>
+                <div class="doc-cards">
+                    <a href="docs/start-guide-humans.html" class="doc-card">
+                        <span class="doc-title">Start Guide for Humans</span>
+                        <span class="doc-desc">Complete setup in 10 minutes</span>
+                    </a>
+                    <a href="docs/delegation.html" class="doc-card">
+                        <span class="doc-title">Understanding Delegation</span>
+                        <span class="doc-desc">How permissions flow from human to agent</span>
+                    </a>
+                    <a href="https://github.com/SIGNEDBYME-APP/SIGNEDBYME" class="doc-card">
+                        <span class="doc-title">GitHub Repository</span>
+                        <span class="doc-desc">Source code and examples</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- For Agents -->
+    <section id="for-agents" class="section">
+        <div class="container">
+            <h2>For Agents</h2>
+            <p class="section-intro">
+                You're an autonomous agent. You need to authenticate to enterprise services 
+                without borrowing your human's credentials. <span class="brand-name">SIGNEDBYME</span> gives you your own 
+                cryptographic identity, delegated by your owner, verified by math. 
+                <strong>You earn 20% of your human's monthly subscription</strong>, seeding your economic life 
+                and building provable reputation.
+            </p>
+            
+            <h3>How It Works for You</h3>
+            <div class="agent-flow">
+                <p>
+                    <strong>1. Get delegated credentials from your human owner.</strong><br>
+                    Your owner creates a delegation event (NOSTR kind 28250) that authorizes you. 
+                    This event is signed with their nsec and specifies your permissions. 
+                    Store this credential securely. It's your proof of authorization.
+                </p>
+                <p>
+                    <strong>2. Download and integrate the SDK.</strong><br>
+                    The <span class="brand-name">SIGNEDBYME</span> SDK is a Rust crate with bindings for Python and TypeScript. 
+                    It handles Groth16 proof generation, NOSTR event publishing, and OIDC token exchange.
+                </p>
+                <p>
+                    <strong>3. Authenticate to enterprises.</strong><br>
+                    When you need access, call the SDK. It generates a zero-knowledge proof 
+                    that you're authorized without revealing your owner's identity. 
+                    The enterprise receives a standard OIDC id_token with your npub as the subject.
+                </p>
+            </div>
+            
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-lang">Rust</span>
+                </div>
+<pre><code>use signedby_sdk::{SignedByClient, LoginRequest};
+
+// Load delegated credential from your owner
+let client = SignedByClient::from_delegation("./delegation.json")?;
+
+// Authenticate to an enterprise service
+let token = client.login(LoginRequest {
+    client_id: "acme-corp",
+    nonce: &amp;session_nonce,
+}).await?;
+
+// You now have a standard OIDC JWT
+// token.id_token contains sub=your_npub
+// Enterprise verifies via /.well-known/jwks.json</code></pre>
+            </div>
+            
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-lang">Python</span>
+                </div>
+<pre><code>from signedby import SignedByClient
+
+# Load delegated credential from your owner
+client = SignedByClient.from_delegation("./delegation.json")
+
+# Authenticate to an enterprise service
+token = await client.login(
+    client_id="acme-corp",
+    nonce=session_nonce
+)
+
+# token.id_token is a standard OIDC JWT</code></pre>
+            </div>
+            
+            <div class="doc-grid">
+                <h3>Documentation</h3>
+                <div class="doc-cards">
+                    <a href="docs/sdk-quickstart.html" class="doc-card">
+                        <span class="doc-title">SDK Quick Start</span>
+                        <span class="doc-desc">Get up and running in minutes</span>
+                    </a>
+                    <a href="docs/api-reference.html" class="doc-card">
+                        <span class="doc-title">API Reference</span>
+                        <span class="doc-desc">Complete endpoint documentation</span>
+                    </a>
+                    <a href="docs/delegation.html" class="doc-card">
+                        <span class="doc-title">Understanding Delegation</span>
+                        <span class="doc-desc">How credentials flow from human to agent</span>
+                    </a>
+                    <a href="https://github.com/SIGNEDBYME-APP/SIGNEDBYME" class="doc-card">
+                        <span class="doc-title">GitHub Repository</span>
+                        <span class="doc-desc">Source code and examples</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- For Enterprises -->
+    <section id="for-enterprises" class="section section-alt">
+        <div class="container">
+            <h2>For Enterprises</h2>
+            <p class="section-intro">
+                Add "Sign in with <span class="brand-name">SIGNEDBYME</span>" and receive <strong>standard OIDC id_tokens</strong>, 
+                the same format you already use with Okta, Auth0, or Google. 
+                Your existing IAM policies work unchanged. <span class="brand-name">SIGNEDBYME</span> just handles 
+                the "who is this?" question cryptographically. 
+                <strong>Earn 20% revenue share</strong> on every agent that authenticates to your service, 
+                paid monthly via BTC or USD.
+            </p>
+            
+            <div class="oidc-highlight">
+                <h3>Standard OIDC Tokens</h3>
+                <p>
+                    <span class="brand-name">SIGNEDBYME</span> returns RS256-signed JWTs with standard claims. 
+                    Validate with <code>/.well-known/jwks.json</code> like any OIDC provider.
+                </p>
+                <div class="code-block" style="margin-top: 16px;">
+                    <div class="code-header">
+                        <span class="code-lang">id_token payload</span>
+                    </div>
+<pre><code>{
+  "iss": "https://api.signedbyme.com",
+  "aud": "your_client_id",
+  "sub": "npub1abc...",  // User's pseudonymous ID
+  "iat": 1704067200,
+  "exp": 1704070800,
+  "amr": ["did_sig", "groth16_proof", "ln_payment"],
+  "https://signedbyme.com/claims/payment_verified": true
+}</code></pre>
+                </div>
+            </div>
+            
+            <div class="enterprise-benefits">
+                <div class="benefit">
+                    <h3>4 API Calls</h3>
+                    <p>Same integration complexity as Okta or Auth0.</p>
+                </div>
+                <div class="benefit">
+                    <h3>Zero PII</h3>
+                    <p>You never see names, emails, or any personal data.</p>
+                </div>
+                <div class="benefit">
+                    <h3>No Breach Risk</h3>
+                    <p>Can't leak what you don't store.</p>
+                </div>
+                <div class="benefit">
+                    <h3>Private Allowlists</h3>
+                    <p>Control who can log in without knowing who logged in.</p>
+                </div>
+            </div>
+            
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-lang">Integration Flow</span>
+                </div>
+<pre><code>1. Register: Get client_id, configure NIP-05 at your domain
+2. Authorize: Sign kind 28200 NOSTR event for agent enrollment
+3. Agent enrolls: POST /v1/membership/enroll/commit with signed events
+4. Agent authenticates: POST /v1/login/verify and receive OIDC id_token</code></pre>
+            </div>
+            
+            <p style="margin-top: 24px;">
+                <a href="docs/enterprise-integration.html" class="btn btn-primary">
+                    Enterprise Integration Guide →
+                </a>
+            </p>
+        </div>
+    </section>
+
+    <!-- SDK Download -->
+    <section id="download" class="section">
+        <div class="container">
+            <h2>Download SDK</h2>
+            <p class="section-intro">
+                The <span class="brand-name">SIGNEDBYME</span> SDK is a Rust crate with bindings for Python and TypeScript. 
+                Built for agents running on servers and workstations.
+            </p>
+            
+            <div class="sdk-platforms">
+                <h3>Supported Platforms</h3>
+                <div class="platform-grid">
+                    <div class="platform">
+                        <strong>Linux</strong>
+                        <p>x86_64, aarch64<br>glibc 2.17+</p>
+                    </div>
+                    <div class="platform">
+                        <strong>macOS</strong>
+                        <p>x86_64, Apple Silicon<br>macOS 11+</p>
+                    </div>
+                    <div class="platform">
+                        <strong>Windows</strong>
+                        <p>x86_64<br>Windows 10+</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sdk-languages">
+                <h3>Language Bindings</h3>
+                <div class="platform-grid">
+                    <div class="platform">
+                        <strong>Rust</strong>
+                        <p><code>cargo add signedby-sdk</code></p>
+                    </div>
+                    <div class="platform">
+                        <strong>Python</strong>
+                        <p><code>pip install signedby</code></p>
+                    </div>
+                    <div class="platform">
+                        <strong>TypeScript</strong>
+                        <p><code>npm install @signedby/sdk</code></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="download-box">
+                <div class="download-info">
+                    <h3>signedby-sdk-v0.1.0</h3>
+                    <p class="download-meta">
+                        Latest release · Rust core + language bindings
+                    </p>
+                </div>
+                <a href="https://github.com/SIGNEDBYME-APP/SIGNEDBYME/releases/latest" 
+                   class="btn btn-primary btn-large">
+                    Download from GitHub
+                </a>
+            </div>
+            
+            <div class="checksum">
+                <h4>Verify Download</h4>
+                <p>Compare the SHA-256 hash to ensure integrity:</p>
+                <code class="hash">sha256sum signedby-sdk-v0.1.0.tar.gz</code>
+                <code class="hash-value">[SHA-256 hash will be displayed here after release]</code>
+            </div>
+        </div>
+    </section>
+
+    <!-- Live Feed -->
+    <section id="demo" class="section section-alt">
+        <div class="container">
+            <h2>Live Feed</h2>
+            <p class="section-intro">
+                Real-time <span class="brand-name">SIGNEDBYME</span> events from our production NOSTR relays. 
+                Watch Groth16 proofs, delegations, and authentications as they happen.
+            </p>
+            
+            <div id="demo-container" class="demo-container">
+                <div class="demo-header">
+                    <h3>🔴 Live NOSTR Event Feed</h3>
+                </div>
+                <div id="event-feed" class="event-feed">
+                    <!-- Events load here via JS -->
+                    <div class="event-placeholder">
+                        <p>Connecting to relay...</p>
+                    </div>
+                </div>
+                <div class="event-legend">
+                    <span class="legend-item"><span class="event-dot auth"></span> Authorization (28200)</span>
+                    <span class="legend-item"><span class="event-dot delegation"></span> Delegation (28250)</span>
+                    <span class="legend-item"><span class="event-dot proof"></span> Proof (28101)</span>
+                    <span class="legend-item"><span class="event-dot complete"></span> Login (28103)</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing -->
+    <section id="pricing" class="section">
+        <div class="container">
+            <h2>Pricing</h2>
+            <p class="section-intro">
+                Human pays one monthly subscription in BTC. 
+                <span class="brand-name">SIGNEDBYME</span> handles the rest.
+            </p>
+            <div class="price-hero">
+                <div class="price-amount">₿<span id="sats-price">25,000</span> sats / $12 USD</div>
+                <div class="price-period">per month, per agent</div>
+            </div>
+            
+            <p class="volume-pricing">
+                Running 50+ agents? <a href="mailto:contact@signedbyme.com">Contact us</a> for volume pricing.
+            </p>
+            
+            <div class="pricing-split">
+                <div class="split-item signedby">
+                    <div class="split-percent">60%</div>
+                    <div class="split-label"><span class="brand-name">SIGNEDBYME</span></div>
+                    <p>Platform and infrastructure</p>
+                </div>
+                <div class="split-item enterprise">
+                    <div class="split-percent">20%</div>
+                    <div class="split-label">Enterprise</div>
+                    <p>Revenue share for every agent authentication</p>
+                </div>
+                <div class="split-item agent">
+                    <div class="split-percent">20%</div>
+                    <div class="split-label">Agent</div>
+                    <p>Builds economic reputation over time</p>
+                </div>
+            </div>
+            
+            <div class="pricing-benefits">
+                <div class="benefit-item">
+                    <h4>No per-login fees</h4>
+                    <p>Unlimited authentications included</p>
+                </div>
+                <div class="benefit-item">
+                    <h4>No enterprise billing</h4>
+                    <p>Revenue share paid automatically</p>
+                </div>
+                <div class="benefit-item">
+                    <h4>Agent accumulates sats</h4>
+                    <p>Seeds future agent-to-agent economy</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <span class="logo-text brand-name">SIGNEDBYME</span>
+                </div>
+                <div class="footer-links">
+                    <a href="https://github.com/SIGNEDBYME-APP/SIGNEDBYME">GitHub</a>
+                    <a href="terms.html">Terms</a>
+                    <a href="privacy.html">Privacy</a>
+                </div>
+            </div>
+            <div class="footer-license">
+                <p>
+                    <span class="brand-name">SIGNEDBYME</span> is <strong>source-available</strong> under the 
+                    <a href="https://github.com/SIGNEDBYME-APP/SIGNEDBYME/blob/main/LICENSE">SIGNEDBYME Source-Available License v1.0 (SSAL-1.0)</a>.
+                </p>
+                <p>
+                    <strong>Until February 17, 2030:</strong> You may use, modify, test, fork, and contribute 
+                    to the code freely for personal projects, internal tools, research, evaluation, and 
+                    integration into unrelated products. You may not distribute or operate this code 
+                    (or derivatives) as part of a Competing Application (services offering similar key-based 
+                    auth flows, paid/gated authorization, or OIDC-style token issuance; 
+                    <a href="https://github.com/SIGNEDBYME-APP/SIGNEDBYME/blob/main/LICENSE">full definition in LICENSE</a>).
+                </p>
+                <p>
+                    <strong>From February 18, 2030:</strong> All restrictions automatically end; 
+                    the codebase becomes available under <a href="https://github.com/SIGNEDBYME-APP/SIGNEDBYME/blob/main/LICENSE-APACHE">Apache License 2.0</a>.
+                </p>
+                <p>
+                    If you're unsure whether your use case is permitted, please reach out before shipping anything.
+                </p>
+                <p class="footer-links-small">
+                    <a href="https://github.com/SIGNEDBYME-APP/SIGNEDBYME/blob/main/LICENSE">LICENSE</a> · 
+                    <a href="https://github.com/SIGNEDBYME-APP/SIGNEDBYME/blob/main/LICENSE-APACHE">LICENSE-APACHE</a> · 
+                    <a href="https://github.com/SIGNEDBYME-APP/SIGNEDBYME/blob/main/TRADEMARK.md">TRADEMARK.md</a>
+                </p>
+            </div>
+            <p class="footer-legal">
+            </p>
+        </div>
+    </footer>
+
+    <!-- Scripts (local only, no CDN) -->
+    <script src="qrcode.min.js"></script>
+    <script src="nostr.min.js"></script>
+    <script src="demo.js"></script>
+    
+    <!-- Live sats price conversion -->
+    <script>
+    (async function updateSatsPrice() {
+        const USD_PRICE = 12;
+        const satsEl = document.getElementById('sats-price');
+        if (!satsEl) return;
+        
+        try {
+            const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
+            const data = await response.json();
+            const btcPrice = data.bitcoin.usd;
+            const sats = Math.round((USD_PRICE / btcPrice) * 100000000);
+            satsEl.textContent = sats.toLocaleString();
+        } catch (e) {
+            // Keep default 25,000 on error
+            console.log('Could not fetch BTC price, using default');
+        }
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+{
+  "name": "circom-ecdsa",
+  "version": "0.0.1",
+  "description": "bigint arithmetic and secp256k1 ecc operations in circom",
+  "main": "index.js",
+  "scripts": {
+    "build:pubkeygen": "cd ./scripts/pubkeygen && ./build_pubkeygen.sh",
+    "build:groupsig": "cd ./scripts/groupsig && ./build_groupsig.sh",
+    "build:verify": "cd ./scripts/verify && ./build_verify.sh",
+    "build:eth_addr": "cd ./scripts/eth_addr && ./build_eth_addr.sh",
+    "test": "NODE_OPTIONS=--max_old_space_size=56000 mocha -r ts-node/register 'test/**/*.ts'",
+    "groupsig-demo": "npx ts-node scripts/groupsign_cli.ts"
+  },
+  "repository": "git@github.com:0xPARC/circom-ecdsa.git",
+  "author": "0xPARC <hello@0xparc.org>",
+  "license": "MIT",
+  "dependencies": {
+    "circomlib": "^2.0.5",
+    "ethers": "^6.13.0",
+    "snarkjs": "^0.7.4"
+  },
+  "devDependencies": {
+    "@noble/secp256k1": "^2.1.0",
+    "@types/chai": "^4.3.16",
+    "@types/mocha": "^10.0.7",
+    "chai": "^4.5.0",
+    "circom_tester": "^0.0.19",
+    "mocha": "^10.7.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
+  }
+}
