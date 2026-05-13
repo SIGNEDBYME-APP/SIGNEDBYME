@@ -22,7 +22,7 @@ jobs:
             os: ubuntu-latest
             rapidsnark_target: host
           - target: linux-arm64
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm64
             rapidsnark_target: host_arm64
           - target: macos-arm64
             os: macos-latest
@@ -57,6 +57,19 @@ jobs:
         run: |
           npm install
           npx task createFieldSources
+
+      - name: Patch field sources (fix extern C linkage)
+        working-directory: native/rapidsnark/build
+        run: |
+          # Fix missing extern "C" on rawMSquare and rawToMontgomery
+          # These functions are used from C++ but defined in generic.cpp without extern "C"
+          for file in fr.hpp fq.hpp; do
+            sed -i.bak 's/^           void \([A-Z][a-z]*\)_rawMSquare/extern "C" void \1_rawMSquare/' $file
+            sed -i.bak 's/^           void \([A-Z][a-z]*\)_rawToMontgomery/extern "C" void \1_rawToMontgomery/' $file
+            sed -i.bak 's/^void \([A-Z][a-z]*\)_rawMSquare/extern "C" void \1_rawMSquare/' $file
+            sed -i.bak 's/^void \([A-Z][a-z]*\)_rawToMontgomery/extern "C" void \1_rawToMontgomery/' $file
+            rm -f $file.bak
+          done
 
       - name: Build GMP (macOS only)
         if: runner.os == 'macOS'

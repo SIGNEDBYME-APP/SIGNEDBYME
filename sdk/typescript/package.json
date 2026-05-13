@@ -14,9 +14,12 @@
   },
   "files": [
     "dist",
+    "lib",
+    "scripts",
     "README.md"
   ],
   "scripts": {
+    "postinstall": "node scripts/postinstall.js",
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "test": "vitest",
     "lint": "eslint src/",
