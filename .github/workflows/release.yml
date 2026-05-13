@@ -47,19 +47,22 @@ jobs:
         run: |
           brew install gmp nlohmann-json nasm cmake
 
-      - name: Setup GMP for rapidsnark (macOS)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate field sources
+        working-directory: native/rapidsnark
+        run: |
+          npm install
+          npx task createFieldSources
+
+      - name: Build GMP (macOS only)
         if: runner.os == 'macOS'
         working-directory: native/rapidsnark
         run: |
-          mkdir -p depends/gmp/package_${{ matrix.rapidsnark_target }}/lib
-          mkdir -p depends/gmp/package_${{ matrix.rapidsnark_target }}/include
-          if [ "${{ matrix.rapidsnark_target }}" = "macos_arm64" ]; then
-            cp /opt/homebrew/lib/libgmp.a depends/gmp/package_macos_arm64/lib/
-            cp /opt/homebrew/include/gmp.h depends/gmp/package_macos_arm64/include/
-          else
-            cp /usr/local/lib/libgmp.a depends/gmp/package_macos_x86_64/lib/
-            cp /usr/local/include/gmp.h depends/gmp/package_macos_x86_64/include/
-          fi
+          ./build_gmp.sh ${{ matrix.rapidsnark_target }}
 
       - name: Build rapidsnark
         working-directory: native/rapidsnark
