@@ -8,6 +8,7 @@ on:
 env:
   ZKEY_URL: https://signedby-assets.atl1.cdn.digitaloceanspaces.com/groth16/membership_final.zkey
   VK_URL: https://signedby-assets.atl1.cdn.digitaloceanspaces.com/groth16/verification_key_final.json
+  FIELD_SOURCES_URL: https://signedby-assets.atl1.cdn.digitaloceanspaces.com/groth16/field-sources.tar.gz
 
 jobs:
   # Build native SDK bundles for each platform
@@ -50,16 +51,19 @@ jobs:
         run: |
           brew install gmp nlohmann-json nasm cmake
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Generate field sources
-        working-directory: native/rapidsnark
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
         run: |
-          npm install
-          npx task createFieldSources
+          choco install cmake nasm -y
+
+      - name: Download field sources from CDN
+        working-directory: native/rapidsnark
+        shell: bash
+        run: |
+          mkdir -p build
+          curl -L ${{ env.FIELD_SOURCES_URL }} | tar xzf - -C build
+          ls -la build/
 
       - name: Patch field sources (fix extern C linkage)
         working-directory: native/rapidsnark/build
@@ -67,7 +71,7 @@ jobs:
         run: |
           # Fix missing extern "C" on raw functions
           # Linux: perl regex works
-          # macOS/Windows: wrap entire file in extern "C" block
+          # macOS/Windows: wrap functions (after includes) in extern "C" block
           
           if [ "${{ runner.os }}" = "Linux" ]; then
             # Perl regex approach (works on Linux)
@@ -80,13 +84,16 @@ jobs:
               perl -i -pe 's/^int ([A-Z][a-z]*_raw)/extern "C" int $1/' $file
             done
           else
-            # Wrapper approach (works on macOS/Windows)
+            # Wrapper approach - insert extern "C" { AFTER includes, not at line 1
             for file in fr_raw_generic.cpp fq_raw_generic.cpp; do
-              mv "$file" "${file}.orig"
-              echo 'extern "C" {' > "$file"
-              cat "${file}.orig" >> "$file"
-              echo '}' >> "$file"
-              rm "${file}.orig"
+              last_include=$(grep -n '#include' "$file" | tail -1 | cut -d: -f1)
+              if [ -n "$last_include" ]; then
+                head -n "$last_include" "$file" > "${file}.tmp"
+                echo 'extern "C" {' >> "${file}.tmp"
+                tail -n +$((last_include + 1)) "$file" >> "${file}.tmp"
+                echo '}' >> "${file}.tmp"
+                mv "${file}.tmp" "$file"
+              fi
             done
           fi
 
@@ -96,7 +103,21 @@ jobs:
         run: |
           ./build_gmp.sh ${{ matrix.rapidsnark_target }}
 
+      - name: Build GMP (Windows)
+        if: runner.os == 'Windows'
+        working-directory: native/rapidsnark
+        shell: bash
+        run: |
+          # Download prebuilt GMP for Windows
+          mkdir -p depends/gmp/package_windows_x64/lib
+          mkdir -p depends/gmp/package_windows_x64/include
+          curl -L -o gmp.zip https://github.com/ShiftMediaProject/gmp/releases/download/6.3.0/libgmp_6.3.0_msvc17.zip
+          unzip -q gmp.zip -d gmp_extract
+          cp gmp_extract/lib/x64/*.lib depends/gmp/package_windows_x64/lib/
+          cp gmp_extract/include/*.h depends/gmp/package_windows_x64/include/
+
       - name: Build rapidsnark
+        if: runner.os != 'Windows'
         working-directory: native/rapidsnark
         run: |
           # Build with -DUSE_ASM=OFF for shared library compatibility (PIC)
@@ -120,18 +141,41 @@ jobs:
             make -j$(sysctl -n hw.ncpu) rapidsnark
           fi
 
+      - name: Build rapidsnark (Windows)
+        if: runner.os == 'Windows'
+        working-directory: native/rapidsnark
+        shell: cmd
+        run: |
+          mkdir build_prover_windows
+          cd build_prover_windows
+          cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DUSE_ASM=OFF -DGMP_PREFIX=..\depends\gmp\package_windows_x64 -DGMP_INCLUDE_DIR=..\depends\gmp\package_windows_x64\include -DGMP_LIB_DIR=..\depends\gmp\package_windows_x64\lib
+          cmake --build . --config Release --target rapidsnark
+
       - name: Build witness calculator
+        if: runner.os != 'Windows'
         working-directory: circuits/build/membership_cpp
         run: |
           make
 
+      - name: Build witness calculator (Windows)
+        if: runner.os == 'Windows'
+        working-directory: circuits/build/membership_cpp
+        shell: bash
+        run: |
+          # Windows witness calculator - compile as executable
+          # The Makefile uses g++, we need to adapt for MSVC or use mingw
+          # For now, skip witness calculator on Windows (can be added later)
+          echo "Witness calculator build skipped on Windows (TODO)"
+
       - name: Download zkey from CDN
+        shell: bash
         run: |
           mkdir -p dist
           curl -L -o dist/membership_final.zkey ${{ env.ZKEY_URL }}
           curl -L -o dist/verification_key_final.json ${{ env.VK_URL }}
 
       - name: Collect artifacts
+        shell: bash
         run: |
           # Copy native libraries
           if [ "${{ matrix.target }}" = "linux-x64" ]; then
@@ -146,6 +190,9 @@ jobs:
           elif [ "${{ matrix.target }}" = "macos-x64" ]; then
             cp native/rapidsnark/package_macos_x86_64/lib/librapidsnark.dylib dist/ || cp native/rapidsnark/build_prover_macos_x86_64/src/librapidsnark.dylib dist/
             cp circuits/build/membership_cpp/membership dist/membership_witness
+          elif [ "${{ matrix.target }}" = "windows-x64" ]; then
+            cp native/rapidsnark/build_prover_windows/src/Release/rapidsnark.dll dist/ || cp native/rapidsnark/build_prover_windows/Release/rapidsnark.dll dist/ || true
+            # Witness calculator not built on Windows yet
           fi
           
           # Copy witness data
@@ -156,9 +203,14 @@ jobs:
           sha256sum * > SHA256SUMS.txt || shasum -a 256 * > SHA256SUMS.txt
 
       - name: Create ZIP
+        shell: bash
         run: |
           cd dist
-          zip -r ../signedby-sdk-${{ matrix.target }}-${{ github.ref_name }}.zip .
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            7z a ../signedby-sdk-${{ matrix.target }}-${{ github.ref_name }}.zip .
+          else
+            zip -r ../signedby-sdk-${{ matrix.target }}-${{ github.ref_name }}.zip .
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
