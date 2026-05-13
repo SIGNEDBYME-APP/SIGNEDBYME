@@ -1,0 +1,12 @@
+[submodule "native/rapidsnark/depends/ffiasm"]
+	path = native/rapidsnark/depends/ffiasm
+	url = https://github.com/iden3/ffiasm
+[submodule "native/rapidsnark/depends/circom_runtime"]
+	path = native/rapidsnark/depends/circom_runtime
+	url = https://github.com/iden3/circom_runtime
+[submodule "native/rapidsnark/depends/json"]
+	path = native/rapidsnark/depends/json
+	url = https://github.com/nlohmann/json
+[submodule "native/rapidsnark/depends/pistache"]
+	path = native/rapidsnark/depends/pistache
+	url = https://github.com/pistacheio/pistache
