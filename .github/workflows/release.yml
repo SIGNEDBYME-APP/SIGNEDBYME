@@ -88,23 +88,23 @@ jobs:
         working-directory: native/rapidsnark
         run: |
           # Build with -DUSE_ASM=OFF for shared library compatibility (PIC)
-          # -DBUILD_TESTS=OFF skips test_prover which has static lib linking issues
+          # Build only 'rapidsnark' target - skip tests (avoids static lib linking issues)
           if [ "${{ matrix.target }}" = "linux-x64" ]; then
             rm -rf build_prover && mkdir build_prover && cd build_prover
-            cmake .. -DCMAKE_BUILD_TYPE=Release -DUSE_ASM=OFF -DBUILD_TESTS=OFF -DUSE_OPENMP=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX=../package
-            make -j$(nproc) && make install
+            cmake .. -DCMAKE_BUILD_TYPE=Release -DUSE_ASM=OFF -DUSE_OPENMP=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX=../package
+            make -j$(nproc) rapidsnark && make install
           elif [ "${{ matrix.target }}" = "linux-arm64" ]; then
             rm -rf build_prover_arm64 && mkdir build_prover_arm64 && cd build_prover_arm64
-            cmake .. -DTARGET_PLATFORM=aarch64 -DCMAKE_BUILD_TYPE=Release -DUSE_ASM=OFF -DBUILD_TESTS=OFF -DUSE_OPENMP=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX=../package_arm64
-            make -j$(nproc) && make install
+            cmake .. -DTARGET_PLATFORM=aarch64 -DCMAKE_BUILD_TYPE=Release -DUSE_ASM=OFF -DUSE_OPENMP=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX=../package_arm64
+            make -j$(nproc) rapidsnark && make install
           elif [ "${{ matrix.target }}" = "macos-arm64" ]; then
             rm -rf build_prover_macos_arm64 && mkdir build_prover_macos_arm64 && cd build_prover_macos_arm64
-            cmake .. -DTARGET_PLATFORM=macos_arm64 -DCMAKE_BUILD_TYPE=Release -DUSE_ASM=OFF -DBUILD_TESTS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX=../package_macos_arm64
-            make -j$(sysctl -n hw.ncpu) && make install
+            cmake .. -DTARGET_PLATFORM=macos_arm64 -DCMAKE_BUILD_TYPE=Release -DUSE_ASM=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX=../package_macos_arm64
+            make -j$(sysctl -n hw.ncpu) rapidsnark && make install
           elif [ "${{ matrix.target }}" = "macos-x64" ]; then
             rm -rf build_prover_macos_x86_64 && mkdir build_prover_macos_x86_64 && cd build_prover_macos_x86_64
-            cmake .. -DTARGET_PLATFORM=macos_x86_64 -DCMAKE_BUILD_TYPE=Release -DUSE_ASM=OFF -DBUILD_TESTS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX=../package_macos_x86_64
-            make -j$(sysctl -n hw.ncpu) && make install
+            cmake .. -DTARGET_PLATFORM=macos_x86_64 -DCMAKE_BUILD_TYPE=Release -DUSE_ASM=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX=../package_macos_x86_64
+            make -j$(sysctl -n hw.ncpu) rapidsnark && make install
           fi
 
       - name: Build witness calculator
