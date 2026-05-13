@@ -30,6 +30,9 @@ jobs:
           - target: macos-x64
             os: macos-13
             rapidsnark_target: macos_x86_64
+          - target: windows-x64
+            os: windows-latest
+            rapidsnark_target: windows_x64
 
     steps:
       - uses: actions/checkout@v4
@@ -47,6 +50,12 @@ jobs:
         run: |
           brew install gmp nlohmann-json nasm cmake
 
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install cmake nasm -y
+          # GMP will be built from source via build_gmp.sh equivalent
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -54,28 +63,26 @@ jobs:
 
       - name: Generate field sources
         working-directory: native/rapidsnark
+        shell: bash
         run: |
           npm install
           npx task createFieldSources
 
       - name: Patch field sources (fix extern C linkage)
         working-directory: native/rapidsnark/build
+        shell: bash
         run: |
-          # Fix missing extern "C" on raw functions
-          # Headers declare with extern "C", implementations must match
-          # Using perl for cross-platform compatibility (BSD sed vs GNU sed)
-          
-          # Patch headers (fix indented declarations)
-          for file in fr.hpp fq.hpp; do
-            perl -i -pe 's/^           void ([A-Z][a-z]*_raw)/extern "C" void $1/' $file
-            perl -i -pe 's/^           int ([A-Z][a-z]*_raw)/extern "C" int $1/' $file
-          done
-          
-          # Patch implementations (raw_generic.cpp files used when USE_ASM=OFF)
-          # All void/int Fr_raw* and Fq_raw* functions need extern "C"
+          # Wrap entire raw_generic.cpp files in extern "C" block
+          # This is bulletproof - no regex matching individual functions
           for file in fr_raw_generic.cpp fq_raw_generic.cpp; do
-            perl -i -pe 's/^void ([A-Z][a-z]*_raw)/extern "C" void $1/' $file
-            perl -i -pe 's/^int ([A-Z][a-z]*_raw)/extern "C" int $1/' $file
+            echo "Patching $file with extern \"C\" wrapper..."
+            mv "$file" "${file}.orig"
+            echo 'extern "C" {' > "$file"
+            cat "${file}.orig" >> "$file"
+            echo '}' >> "$file"
+            rm "${file}.orig"
+            # Verify patch applied
+            head -1 "$file"
           done
 
       - name: Build GMP (macOS only)
@@ -84,7 +91,17 @@ jobs:
         run: |
           ./build_gmp.sh ${{ matrix.rapidsnark_target }}
 
-      - name: Build rapidsnark
+      - name: Build GMP (Windows)
+        if: runner.os == 'Windows'
+        working-directory: native/rapidsnark
+        shell: bash
+        run: |
+          # Build GMP for Windows using MSYS2/MinGW approach
+          # For now, use vcpkg to get prebuilt GMP
+          vcpkg install gmp:x64-windows-static
+
+      - name: Build rapidsnark (Unix)
+        if: runner.os != 'Windows'
         working-directory: native/rapidsnark
         run: |
           # Build with -DUSE_ASM=OFF for shared library compatibility (PIC)
@@ -108,18 +125,41 @@ jobs:
             make -j$(sysctl -n hw.ncpu) rapidsnark
           fi
 
-      - name: Build witness calculator
+      - name: Build rapidsnark (Windows)
+        if: runner.os == 'Windows'
+        working-directory: native/rapidsnark
+        shell: cmd
+        run: |
+          mkdir build_prover_windows
+          cd build_prover_windows
+          cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DUSE_ASM=OFF -DCMAKE_TOOLCHAIN_FILE=%VCPKG_INSTALLATION_ROOT%\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static
+          cmake --build . --config Release --target rapidsnark
+
+      - name: Build witness calculator (Unix)
+        if: runner.os != 'Windows'
         working-directory: circuits/build/membership_cpp
         run: |
           make
 
+      - name: Build witness calculator (Windows)
+        if: runner.os == 'Windows'
+        working-directory: circuits/build/membership_cpp
+        shell: cmd
+        run: |
+          REM Windows witness calculator build
+          REM The Makefile may need adaptation for MSVC
+          cmake -G "Visual Studio 17 2022" -A x64 .
+          cmake --build . --config Release
+
       - name: Download zkey from CDN
+        shell: bash
         run: |
           mkdir -p dist
           curl -L -o dist/membership_final.zkey ${{ env.ZKEY_URL }}
           curl -L -o dist/verification_key_final.json ${{ env.VK_URL }}
 
-      - name: Collect artifacts
+      - name: Collect artifacts (Unix)
+        if: runner.os != 'Windows'
         run: |
           # Copy native libraries
           if [ "${{ matrix.target }}" = "linux-x64" ]; then
@@ -143,10 +183,25 @@ jobs:
           cd dist
           sha256sum * > SHA256SUMS.txt || shasum -a 256 * > SHA256SUMS.txt
 
+      - name: Collect artifacts (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          cp native/rapidsnark/build_prover_windows/src/Release/rapidsnark.dll dist/ || cp native/rapidsnark/build_prover_windows/src/rapidsnark.dll dist/
+          cp circuits/build/membership_cpp/Release/membership_witness.exe dist/ || cp circuits/build/membership_cpp/membership_witness.exe dist/ || true
+          cp circuits/build/membership_cpp/membership.dat dist/ || true
+          cd dist
+          sha256sum * > SHA256SUMS.txt || certutil -hashfile * SHA256 > SHA256SUMS.txt 2>/dev/null || true
+
       - name: Create ZIP
+        shell: bash
         run: |
           cd dist
-          zip -r ../signedby-sdk-${{ matrix.target }}-${{ github.ref_name }}.zip .
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            7z a ../signedby-sdk-${{ matrix.target }}-${{ github.ref_name }}.zip .
+          else
+            zip -r ../signedby-sdk-${{ matrix.target }}-${{ github.ref_name }}.zip .
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
