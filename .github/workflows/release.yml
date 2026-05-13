@@ -61,14 +61,21 @@ jobs:
       - name: Patch field sources (fix extern C linkage)
         working-directory: native/rapidsnark/build
         run: |
-          # Fix missing extern "C" on rawMSquare and rawToMontgomery
-          # These functions are used from C++ but defined in generic.cpp without extern "C"
+          # Fix missing extern "C" on raw functions
+          # Headers declare with extern "C", implementations must match
           # Using perl for cross-platform compatibility (BSD sed vs GNU sed)
+          
+          # Patch headers (fix indented declarations)
           for file in fr.hpp fq.hpp; do
-            perl -i -pe 's/^           void ([A-Z][a-z]*_rawMSquare)/extern "C" void $1/' $file
-            perl -i -pe 's/^           void ([A-Z][a-z]*_rawToMontgomery)/extern "C" void $1/' $file
-            perl -i -pe 's/^void ([A-Z][a-z]*_rawMSquare)/extern "C" void $1/' $file
-            perl -i -pe 's/^void ([A-Z][a-z]*_rawToMontgomery)/extern "C" void $1/' $file
+            perl -i -pe 's/^           void ([A-Z][a-z]*_raw)/extern "C" void $1/' $file
+            perl -i -pe 's/^           int ([A-Z][a-z]*_raw)/extern "C" int $1/' $file
+          done
+          
+          # Patch implementations (raw_generic.cpp files used when USE_ASM=OFF)
+          # All void/int Fr_raw* and Fq_raw* functions need extern "C"
+          for file in fr_raw_generic.cpp fq_raw_generic.cpp; do
+            perl -i -pe 's/^void ([A-Z][a-z]*_raw)/extern "C" void $1/' $file
+            perl -i -pe 's/^int ([A-Z][a-z]*_raw)/extern "C" int $1/' $file
           done
 
       - name: Build GMP (macOS only)
