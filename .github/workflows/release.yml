@@ -68,11 +68,21 @@ jobs:
         run: |
           # Use vcpkg to install GMP (reliable, official)
           vcpkg install gmp:x64-windows-static
+          # Debug: show what vcpkg installed
+          echo "=== VCPKG_INSTALLATION_ROOT: $VCPKG_INSTALLATION_ROOT ==="
+          find "$VCPKG_INSTALLATION_ROOT/installed" -name "*.lib" -o -name "gmp.h" 2>/dev/null | head -20 || true
+          find "$VCPKG_INSTALLATION_ROOT/packages" -name "*.lib" -o -name "gmp.h" 2>/dev/null | head -20 || true
           # Copy to where rapidsnark expects it
           mkdir -p native/rapidsnark/depends/gmp/package/lib
           mkdir -p native/rapidsnark/depends/gmp/package/include
-          cp "$VCPKG_INSTALLATION_ROOT/installed/x64-windows-static/lib/gmp.lib" native/rapidsnark/depends/gmp/package/lib/
-          cp "$VCPKG_INSTALLATION_ROOT/installed/x64-windows-static/include/gmp.h" native/rapidsnark/depends/gmp/package/include/
+          # Try multiple possible locations (vcpkg path varies)
+          cp "$VCPKG_INSTALLATION_ROOT/installed/x64-windows-static/lib/gmp.lib" native/rapidsnark/depends/gmp/package/lib/ 2>/dev/null || \
+          cp "$VCPKG_INSTALLATION_ROOT/installed/x64-windows-static/lib/libgmp.a" native/rapidsnark/depends/gmp/package/lib/gmp.lib 2>/dev/null || \
+          cp "$VCPKG_INSTALLATION_ROOT/packages/gmp_x64-windows-static/lib/gmp.lib" native/rapidsnark/depends/gmp/package/lib/ 2>/dev/null || \
+          echo "WARNING: Could not find gmp.lib"
+          cp "$VCPKG_INSTALLATION_ROOT/installed/x64-windows-static/include/gmp.h" native/rapidsnark/depends/gmp/package/include/ 2>/dev/null || \
+          cp "$VCPKG_INSTALLATION_ROOT/packages/gmp_x64-windows-static/include/gmp.h" native/rapidsnark/depends/gmp/package/include/ 2>/dev/null || \
+          echo "WARNING: Could not find gmp.h"
           echo "=== Installed GMP files ==="
           ls -la native/rapidsnark/depends/gmp/package/lib/
           ls -la native/rapidsnark/depends/gmp/package/include/
@@ -126,11 +136,14 @@ jobs:
             
             # ARM64: skip x86 assembly, compile pure C++
             if [ "$(uname -m)" = "arm64" ]; then
-              echo "ARM64 detected - building without x86 assembly (may take 15-25 min)..."
+              echo "ARM64 detected - building without x86 assembly..."
               g++ -c main.cpp -std=c++11 -O2 -I.
               g++ -c calcwit.cpp -std=c++11 -O2 -I.
-              g++ -c fr.cpp -std=c++11 -O2 -I.
-              g++ -c membership.cpp -std=c++11 -O2 -I.
+              # -Wno-deprecated-declarations silences sprintf warning (Apple security notice)
+              g++ -c fr.cpp -std=c++11 -O2 -I. -Wno-deprecated-declarations
+              # Use -O1 for membership.cpp (huge file, -O2 takes 30+ min and times out)
+              echo "Compiling membership.cpp with -O1 (large file)..."
+              g++ -c membership.cpp -std=c++11 -O1 -I.
               # Link without fr_asm.o (fr.cpp has C++ fallback implementations)
               g++ -o membership main.o calcwit.o fr.o membership.o -lgmp
               echo "Witness build complete (ARM64, no asm)"
