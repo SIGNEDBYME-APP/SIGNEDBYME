@@ -62,25 +62,20 @@ jobs:
         run: |
           ./build_gmp.sh ${{ matrix.rapidsnark_target }}
 
-      - name: Build GMP (Windows)
+      - name: Install GMP via vcpkg (Windows)
         if: runner.os == 'Windows'
-        working-directory: native/rapidsnark
         shell: bash
         run: |
-          # Use MPIR - a Windows-native GMP-compatible library
-          # MPIR is API-compatible with GMP and builds cleanly with MSVC
-          mkdir -p depends/gmp/package/lib
-          mkdir -p depends/gmp/package/include
-          curl -L -o mpir.zip https://github.com/ArtObr/cgbn-windows-build/releases/download/mpir/mpir-3.0.0-static.zip
-          unzip -q mpir.zip -d mpir_extract
-          echo "=== Contents of mpir_extract ==="
-          find mpir_extract -type f | head -30
-          # MPIR provides mpir.h and mpir.lib - copy as gmp.h and gmp.lib for compatibility
-          cp mpir_extract/mpir.h depends/gmp/package/include/gmp.h
-          cp mpir_extract/mpir.lib depends/gmp/package/lib/gmp.lib
-          echo "=== Final package contents ==="
-          ls -la depends/gmp/package/include/
-          ls -la depends/gmp/package/lib/
+          # Use vcpkg to install GMP (reliable, official)
+          vcpkg install gmp:x64-windows-static
+          # Copy to where rapidsnark expects it
+          mkdir -p native/rapidsnark/depends/gmp/package/lib
+          mkdir -p native/rapidsnark/depends/gmp/package/include
+          cp "$VCPKG_INSTALLATION_ROOT/installed/x64-windows-static/lib/gmp.lib" native/rapidsnark/depends/gmp/package/lib/
+          cp "$VCPKG_INSTALLATION_ROOT/installed/x64-windows-static/include/gmp.h" native/rapidsnark/depends/gmp/package/include/
+          echo "=== Installed GMP files ==="
+          ls -la native/rapidsnark/depends/gmp/package/lib/
+          ls -la native/rapidsnark/depends/gmp/package/include/
 
       - name: Build rapidsnark
         if: runner.os != 'Windows'
@@ -128,6 +123,19 @@ jobs:
             export CPLUS_INCLUDE_PATH="${GMP_DIR}/include:${CPLUS_INCLUDE_PATH}"
             export LIBRARY_PATH="${GMP_DIR}/lib:${LIBRARY_PATH}"
             echo "GMP_DIR=${GMP_DIR}"
+            
+            # ARM64: skip x86 assembly, compile pure C++
+            if [ "$(uname -m)" = "arm64" ]; then
+              echo "ARM64 detected - building without x86 assembly (may take 15-25 min)..."
+              g++ -c main.cpp -std=c++11 -O2 -I.
+              g++ -c calcwit.cpp -std=c++11 -O2 -I.
+              g++ -c fr.cpp -std=c++11 -O2 -I.
+              g++ -c membership.cpp -std=c++11 -O2 -I.
+              # Link without fr_asm.o (fr.cpp has C++ fallback implementations)
+              g++ -o membership main.o calcwit.o fr.o membership.o -lgmp
+              echo "Witness build complete (ARM64, no asm)"
+              exit 0
+            fi
             echo "Starting witness build (may take 15-25 min for membership.cpp with -O2)..."
           fi
           make
