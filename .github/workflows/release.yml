@@ -72,8 +72,27 @@ jobs:
           mkdir -p depends/gmp/package/include
           curl -L -o gmp.zip https://github.com/ShiftMediaProject/gmp/releases/download/6.2.1-4/libgmp_6.2.1-4_msvc17.zip
           unzip -q gmp.zip -d gmp_extract
+          # Debug: show what files we downloaded
+          echo "=== Files in gmp_extract ==="
+          find gmp_extract -type f -name "*.lib" -o -name "*.h" | head -50
           cp gmp_extract/lib/x64/*.lib depends/gmp/package/lib/
           cp gmp_extract/include/*.h depends/gmp/package/include/
+          # Ensure gmp.lib exists (MSVC linker looks for this name)
+          cd depends/gmp/package/lib
+          echo "=== Files in package/lib ==="
+          ls -la
+          # Create gmp.lib if it doesn't exist but libgmp.lib does
+          if [ -f libgmp.lib ] && [ ! -f gmp.lib ]; then
+            echo "Creating gmp.lib from libgmp.lib"
+            cp libgmp.lib gmp.lib
+          fi
+          # Also check for gmp_dll.lib pattern
+          if [ -f gmp_dll.lib ] && [ ! -f gmp.lib ]; then
+            echo "Creating gmp.lib from gmp_dll.lib"
+            cp gmp_dll.lib gmp.lib
+          fi
+          echo "=== Final lib directory ==="
+          ls -la
 
       - name: Build rapidsnark
         if: runner.os != 'Windows'
@@ -113,16 +132,18 @@ jobs:
       - name: Build witness calculator
         if: runner.os != 'Windows'
         working-directory: circuits/build/membership_cpp
+        timeout-minutes: 10
         run: |
           if [ "${{ runner.os }}" = "macOS" ]; then
             # macOS: need to tell compiler/linker where GMP is installed
             GMP_DIR="${{ github.workspace }}/native/rapidsnark/depends/gmp/package_${{ matrix.rapidsnark_target }}"
             export CPLUS_INCLUDE_PATH="${GMP_DIR}/include:${CPLUS_INCLUDE_PATH}"
             export LIBRARY_PATH="${GMP_DIR}/lib:${LIBRARY_PATH}"
-            make
-          else
-            make
+            echo "GMP_DIR=${GMP_DIR}"
+            echo "Starting witness build..."
           fi
+          make
+          echo "Witness build complete"
 
       - name: Build witness calculator (Windows)
         if: runner.os == 'Windows'
