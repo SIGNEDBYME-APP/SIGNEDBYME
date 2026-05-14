@@ -56,18 +56,6 @@ jobs:
         run: |
           choco install cmake nasm -y
 
-      - name: Patch field sources (fix extern C linkage - Linux only)
-        if: runner.os == 'Linux'
-        working-directory: native/rapidsnark/build
-        shell: bash
-        run: |
-          # Field sources are embedded in repo (native/rapidsnark/build/)
-          # Linux: patch header files for extern C linkage
-          for file in fr.hpp fq.hpp; do
-            perl -i -pe 's/^           void ([A-Z][a-z]*_raw)/extern "C" void $1/' $file
-            perl -i -pe 's/^           int ([A-Z][a-z]*_raw)/extern "C" int $1/' $file
-          done
-
       - name: Build GMP (macOS only)
         if: runner.os == 'macOS'
         working-directory: native/rapidsnark

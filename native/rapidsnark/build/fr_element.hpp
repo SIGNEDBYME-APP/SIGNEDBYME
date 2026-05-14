@@ -12,11 +12,21 @@
 
 typedef uint64_t FrRawElement[Fr_N64];
 
+#ifdef _MSC_VER
+#pragma pack(push, 1)
+typedef struct {
+    int32_t shortVal;
+    uint32_t type;
+    FrRawElement longVal;
+} FrElement;
+#pragma pack(pop)
+#else
 typedef struct __attribute__((__packed__)) {
     int32_t shortVal;
     uint32_t type;
     FrRawElement longVal;
 } FrElement;
+#endif
 
 typedef FrElement *PFrElement;
 
