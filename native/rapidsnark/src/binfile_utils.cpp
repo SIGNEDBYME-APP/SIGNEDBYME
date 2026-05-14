@@ -1,10 +1,6 @@
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <system_error>
 #include <string>
-#include <memory.h>
+#include <cstring>
 #include <stdexcept>
 
 #include "binfile_utils.hpp"

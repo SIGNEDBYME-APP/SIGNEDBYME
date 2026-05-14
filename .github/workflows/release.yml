@@ -114,7 +114,15 @@ jobs:
         if: runner.os != 'Windows'
         working-directory: circuits/build/membership_cpp
         run: |
-          make
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            # macOS: need to tell compiler/linker where GMP is installed
+            GMP_DIR="${{ github.workspace }}/native/rapidsnark/depends/gmp/package_${{ matrix.rapidsnark_target }}"
+            export CPLUS_INCLUDE_PATH="${GMP_DIR}/include:${CPLUS_INCLUDE_PATH}"
+            export LIBRARY_PATH="${GMP_DIR}/lib:${LIBRARY_PATH}"
+            make
+          else
+            make
+          fi
 
       - name: Build witness calculator (Windows)
         if: runner.os == 'Windows'

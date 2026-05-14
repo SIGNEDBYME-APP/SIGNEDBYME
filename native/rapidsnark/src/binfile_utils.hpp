@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include <memory>
+#include "platform_compat.hpp"
 #include "fileloader.hpp"
 
 namespace BinFileUtils {

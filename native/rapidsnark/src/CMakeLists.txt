@@ -2,6 +2,16 @@ link_libraries(${GMP_LIB})
 
 add_definitions(${GMP_DEFINIONS})
 
+# MSVC (Windows) compatibility
+if(MSVC)
+    # Force include the platform compatibility header
+    add_compile_options(/FI"${CMAKE_CURRENT_SOURCE_DIR}/platform_compat.hpp")
+    # Disable deprecation warnings for standard C functions
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+    # Define NOMINMAX to prevent Windows.h from defining min/max macros
+    add_definitions(-DNOMINMAX)
+endif()
+
 if(USE_ASM)
     if(ARCH MATCHES "arm64")
             add_definitions(-DUSE_ASM -DARCH_ARM64)

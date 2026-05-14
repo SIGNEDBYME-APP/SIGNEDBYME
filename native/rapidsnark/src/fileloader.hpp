@@ -4,6 +4,10 @@
 #include <cstddef>
 #include <string>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 namespace BinFileUtils {
 
 class FileLoader
@@ -23,6 +27,10 @@ public:
 private:
     void*   addr;
     size_t  size;
+#ifdef _WIN32
+    HANDLE  hFile;
+    HANDLE  hMapping;
+#endif
     int     fd;
 };
 
