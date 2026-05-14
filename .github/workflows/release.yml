@@ -65,37 +65,17 @@ jobs:
           curl -L ${{ env.FIELD_SOURCES_URL }} | tar xzf - -C build
           ls -la build/
 
-      - name: Patch field sources (fix extern C linkage)
+      - name: Patch field sources (fix extern C linkage - Linux only)
+        if: runner.os == 'Linux'
         working-directory: native/rapidsnark/build
         shell: bash
         run: |
-          # Fix missing extern "C" on raw functions
-          # Linux: perl regex works
-          # macOS/Windows: wrap functions (after includes) in extern "C" block
-          
-          if [ "${{ runner.os }}" = "Linux" ]; then
-            # Perl regex approach (works on Linux)
-            for file in fr.hpp fq.hpp; do
-              perl -i -pe 's/^           void ([A-Z][a-z]*_raw)/extern "C" void $1/' $file
-              perl -i -pe 's/^           int ([A-Z][a-z]*_raw)/extern "C" int $1/' $file
-            done
-            for file in fr_raw_generic.cpp fq_raw_generic.cpp; do
-              perl -i -pe 's/^void ([A-Z][a-z]*_raw)/extern "C" void $1/' $file
-              perl -i -pe 's/^int ([A-Z][a-z]*_raw)/extern "C" int $1/' $file
-            done
-          else
-            # Wrapper approach - insert extern "C" { AFTER includes, not at line 1
-            for file in fr_raw_generic.cpp fq_raw_generic.cpp; do
-              last_include=$(grep -n '#include' "$file" | tail -1 | cut -d: -f1)
-              if [ -n "$last_include" ]; then
-                head -n "$last_include" "$file" > "${file}.tmp"
-                echo 'extern "C" {' >> "${file}.tmp"
-                tail -n +$((last_include + 1)) "$file" >> "${file}.tmp"
-                echo '}' >> "${file}.tmp"
-                mv "${file}.tmp" "$file"
-              fi
-            done
-          fi
+          # Linux: perl regex for header files
+          # Note: fr_raw_generic.cpp and fq_raw_generic.cpp are pre-patched in CDN
+          for file in fr.hpp fq.hpp; do
+            perl -i -pe 's/^           void ([A-Z][a-z]*_raw)/extern "C" void $1/' $file
+            perl -i -pe 's/^           int ([A-Z][a-z]*_raw)/extern "C" int $1/' $file
+          done
 
       - name: Build GMP (macOS only)
         if: runner.os == 'macOS'
@@ -111,7 +91,7 @@ jobs:
           # Download prebuilt GMP for Windows
           mkdir -p depends/gmp/package_windows_x64/lib
           mkdir -p depends/gmp/package_windows_x64/include
-          curl -L -o gmp.zip https://github.com/ShiftMediaProject/gmp/releases/download/6.3.0/libgmp_6.3.0_msvc17.zip
+          curl -L -o gmp.zip https://github.com/ShiftMediaProject/gmp/releases/download/6.2.1-4/libgmp_6.2.1-4_msvc17.zip
           unzip -q gmp.zip -d gmp_extract
           cp gmp_extract/lib/x64/*.lib depends/gmp/package_windows_x64/lib/
           cp gmp_extract/include/*.h depends/gmp/package_windows_x64/include/
