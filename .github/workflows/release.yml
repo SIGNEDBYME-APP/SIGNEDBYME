@@ -8,7 +8,6 @@ on:
 env:
   ZKEY_URL: https://signedby-assets.atl1.cdn.digitaloceanspaces.com/groth16/membership_final.zkey
   VK_URL: https://signedby-assets.atl1.cdn.digitaloceanspaces.com/groth16/verification_key_final.json
-  FIELD_SOURCES_URL: https://signedby-assets.atl1.cdn.digitaloceanspaces.com/groth16/field-sources.tar.gz
 
 jobs:
   # Build native SDK bundles for each platform
@@ -57,21 +56,13 @@ jobs:
         run: |
           choco install cmake nasm -y
 
-      - name: Download field sources from CDN
-        working-directory: native/rapidsnark
-        shell: bash
-        run: |
-          mkdir -p build
-          curl -L ${{ env.FIELD_SOURCES_URL }} | tar xzf - -C build
-          ls -la build/
-
       - name: Patch field sources (fix extern C linkage - Linux only)
         if: runner.os == 'Linux'
         working-directory: native/rapidsnark/build
         shell: bash
         run: |
-          # Linux: perl regex for header files
-          # Note: fr_raw_generic.cpp and fq_raw_generic.cpp are pre-patched in CDN
+          # Field sources are embedded in repo (native/rapidsnark/build/)
+          # Linux: patch header files for extern C linkage
           for file in fr.hpp fq.hpp; do
             perl -i -pe 's/^           void ([A-Z][a-z]*_raw)/extern "C" void $1/' $file
             perl -i -pe 's/^           int ([A-Z][a-z]*_raw)/extern "C" int $1/' $file
@@ -88,13 +79,13 @@ jobs:
         working-directory: native/rapidsnark
         shell: bash
         run: |
-          # Download prebuilt GMP for Windows
-          mkdir -p depends/gmp/package_windows_x64/lib
-          mkdir -p depends/gmp/package_windows_x64/include
+          # Download prebuilt GMP for Windows to depends/gmp/package/ (path rapidsnark expects)
+          mkdir -p depends/gmp/package/lib
+          mkdir -p depends/gmp/package/include
           curl -L -o gmp.zip https://github.com/ShiftMediaProject/gmp/releases/download/6.2.1-4/libgmp_6.2.1-4_msvc17.zip
           unzip -q gmp.zip -d gmp_extract
-          cp gmp_extract/lib/x64/*.lib depends/gmp/package_windows_x64/lib/
-          cp gmp_extract/include/*.h depends/gmp/package_windows_x64/include/
+          cp gmp_extract/lib/x64/*.lib depends/gmp/package/lib/
+          cp gmp_extract/include/*.h depends/gmp/package/include/
 
       - name: Build rapidsnark
         if: runner.os != 'Windows'
@@ -128,7 +119,7 @@ jobs:
         run: |
           mkdir build_prover_windows
           cd build_prover_windows
-          cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DUSE_ASM=OFF -DGMP_PREFIX=..\depends\gmp\package_windows_x64 -DGMP_INCLUDE_DIR=..\depends\gmp\package_windows_x64\include -DGMP_LIB_DIR=..\depends\gmp\package_windows_x64\lib
+          cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DUSE_ASM=OFF -DGMP_PREFIX=..\depends\gmp\package -DGMP_INCLUDE_DIR=..\depends\gmp\package\include -DGMP_LIB_DIR=..\depends\gmp\package\lib
           cmake --build . --config Release --target rapidsnark
 
       - name: Build witness calculator

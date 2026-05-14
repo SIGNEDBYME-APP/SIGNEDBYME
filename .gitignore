@@ -72,3 +72,9 @@ native/signedby_core/target/
 !circuits/build/verification_key_final.json
 !circuits/build/membership_cpp/
 !circuits/build/.gitignore
+
+# Keep rapidsnark field sources (embedded, no CDN dependency)
+!native/rapidsnark/build/
+native/rapidsnark/build/*.o
+native/rapidsnark/build/*.asm
+native/rapidsnark/build/*.s
