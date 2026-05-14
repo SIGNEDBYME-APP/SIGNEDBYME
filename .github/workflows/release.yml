@@ -67,32 +67,20 @@ jobs:
         working-directory: native/rapidsnark
         shell: bash
         run: |
-          # Download prebuilt GMP for Windows to depends/gmp/package/ (path rapidsnark expects)
+          # Use MPIR - a Windows-native GMP-compatible library
+          # MPIR is API-compatible with GMP and builds cleanly with MSVC
           mkdir -p depends/gmp/package/lib
           mkdir -p depends/gmp/package/include
-          curl -L -o gmp.zip https://github.com/ShiftMediaProject/gmp/releases/download/6.2.1-4/libgmp_6.2.1-4_msvc17.zip
-          unzip -q gmp.zip -d gmp_extract
-          # Debug: show what files we downloaded
-          echo "=== Files in gmp_extract ==="
-          find gmp_extract -type f -name "*.lib" -o -name "*.h" | head -50
-          cp gmp_extract/lib/x64/*.lib depends/gmp/package/lib/
-          cp gmp_extract/include/*.h depends/gmp/package/include/
-          # Ensure gmp.lib exists (MSVC linker looks for this name)
-          cd depends/gmp/package/lib
-          echo "=== Files in package/lib ==="
-          ls -la
-          # Create gmp.lib if it doesn't exist but libgmp.lib does
-          if [ -f libgmp.lib ] && [ ! -f gmp.lib ]; then
-            echo "Creating gmp.lib from libgmp.lib"
-            cp libgmp.lib gmp.lib
-          fi
-          # Also check for gmp_dll.lib pattern
-          if [ -f gmp_dll.lib ] && [ ! -f gmp.lib ]; then
-            echo "Creating gmp.lib from gmp_dll.lib"
-            cp gmp_dll.lib gmp.lib
-          fi
-          echo "=== Final lib directory ==="
-          ls -la
+          curl -L -o mpir.zip https://github.com/ArtObr/cgbn-windows-build/releases/download/mpir/mpir-3.0.0-static.zip
+          unzip -q mpir.zip -d mpir_extract
+          echo "=== Contents of mpir_extract ==="
+          find mpir_extract -type f | head -30
+          # MPIR provides mpir.h and mpir.lib - copy as gmp.h and gmp.lib for compatibility
+          cp mpir_extract/mpir.h depends/gmp/package/include/gmp.h
+          cp mpir_extract/mpir.lib depends/gmp/package/lib/gmp.lib
+          echo "=== Final package contents ==="
+          ls -la depends/gmp/package/include/
+          ls -la depends/gmp/package/lib/
 
       - name: Build rapidsnark
         if: runner.os != 'Windows'
@@ -132,7 +120,7 @@ jobs:
       - name: Build witness calculator
         if: runner.os != 'Windows'
         working-directory: circuits/build/membership_cpp
-        timeout-minutes: 10
+        timeout-minutes: 30
         run: |
           if [ "${{ runner.os }}" = "macOS" ]; then
             # macOS: need to tell compiler/linker where GMP is installed
@@ -140,7 +128,7 @@ jobs:
             export CPLUS_INCLUDE_PATH="${GMP_DIR}/include:${CPLUS_INCLUDE_PATH}"
             export LIBRARY_PATH="${GMP_DIR}/lib:${LIBRARY_PATH}"
             echo "GMP_DIR=${GMP_DIR}"
-            echo "Starting witness build..."
+            echo "Starting witness build (may take 15-25 min for membership.cpp with -O2)..."
           fi
           make
           echo "Witness build complete"
