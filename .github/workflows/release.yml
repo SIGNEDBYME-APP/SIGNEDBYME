@@ -70,25 +70,26 @@ jobs:
             ./build_gmp.sh macos_x86_64
           fi
 
-      - name: Build GMP for MSVC (Windows)
+      - name: Install GMP via vcpkg (Windows)
         if: runner.os == 'Windows'
-        shell: cmd
+        shell: bash
         run: |
-          git clone --depth 1 https://github.com/BrianGladman/gmp.git gmp-gladman
-          cd gmp-gladman\SMP
-          echo === Building libgmp.sln ===
-          msbuild libgmp.sln /p:Configuration=Release /p:Platform=x64 /m /v:minimal || exit /b 1
-          cd ..\..
-          echo === Looking for built files ===
-          dir /s gmp-gladman\*.lib
-          dir /s gmp-gladman\gmp.h
-          mkdir native\rapidsnark\depends\gmp\package\lib
-          mkdir native\rapidsnark\depends\gmp\package\include
-          for /r gmp-gladman %%f in (gmp.lib) do copy "%%f" native\rapidsnark\depends\gmp\package\lib\
-          copy gmp-gladman\gmp.h native\rapidsnark\depends\gmp\package\include\ || exit /b 1
-          echo === Verify installation ===
-          dir native\rapidsnark\depends\gmp\package\lib\
-          dir native\rapidsnark\depends\gmp\package\include\
+          # Clone and bootstrap vcpkg
+          git clone https://github.com/microsoft/vcpkg.git
+          ./vcpkg/bootstrap-vcpkg.sh
+          
+          # Install GMP for x64 Windows
+          ./vcpkg/vcpkg install gmp:x64-windows
+          
+          # Copy to where rapidsnark expects them
+          mkdir -p native/rapidsnark/depends/gmp/package/lib
+          mkdir -p native/rapidsnark/depends/gmp/package/include
+          cp vcpkg/installed/x64-windows/lib/gmp.lib native/rapidsnark/depends/gmp/package/lib/
+          cp vcpkg/installed/x64-windows/include/gmp.h native/rapidsnark/depends/gmp/package/include/
+          
+          echo "=== Verify installation ==="
+          ls -la native/rapidsnark/depends/gmp/package/lib/
+          ls -la native/rapidsnark/depends/gmp/package/include/
 
       - name: Build rapidsnark
         if: runner.os != 'Windows'
