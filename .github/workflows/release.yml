@@ -66,16 +66,23 @@ jobs:
         if: runner.os == 'Windows'
         shell: cmd
         run: |
-          REM Build GMP using Brian Gladman's MSVC-compatible fork
           git clone --depth 1 https://github.com/BrianGladman/gmp.git gmp-gladman
-          cd gmp-gladman\build.vc
-          msbuild gmp.sln /p:Configuration=Release /p:Platform=x64 /m /v:minimal
-          cd ..\..
+          cd gmp-gladman
+          echo === Repository structure ===
+          dir /s /b *.sln
+          dir /s /b *.vcxproj
+          cd build.vc
+          msbuild gmp.sln /p:Configuration=Release /p:Platform=x64 /m /v:minimal || exit /b 1
+          cd ..
+          echo === Looking for built files ===
+          dir /s /b *.lib
+          dir /s /b gmp.h
+          cd ..
           mkdir native\rapidsnark\depends\gmp\package\lib
           mkdir native\rapidsnark\depends\gmp\package\include
-          copy gmp-gladman\lib\x64\Release\gmp.lib native\rapidsnark\depends\gmp\package\lib\
-          copy gmp-gladman\gmp.h native\rapidsnark\depends\gmp\package\include\
-          echo === Installed GMP files ===
+          for /r gmp-gladman %%f in (gmp.lib) do copy "%%f" native\rapidsnark\depends\gmp\package\lib\
+          copy gmp-gladman\gmp.h native\rapidsnark\depends\gmp\package\include\ || exit /b 1
+          echo === Verify installation ===
           dir native\rapidsnark\depends\gmp\package\lib\
           dir native\rapidsnark\depends\gmp\package\include\
 
@@ -128,17 +135,12 @@ jobs:
             
             # Use matrix.target, NOT uname -m (host may differ from target on Rosetta)
             if [ "${{ matrix.target }}" = "macos-arm64" ]; then
-              echo "ARM64 TARGET - building without x86 assembly..."
-              g++ -c main.cpp -std=c++11 -O2 -I.
-              g++ -c calcwit.cpp -std=c++11 -O2 -I.
-              # -Wno-deprecated-declarations silences sprintf warning (Apple security notice)
-              g++ -c fr.cpp -std=c++11 -O2 -I. -Wno-deprecated-declarations
-              # Use -O0 for membership.cpp (huge file, even -O1 times out)
-              echo "Compiling membership.cpp with -O0 (large file, fastest compile)..."
-              g++ -c membership.cpp -std=c++11 -O0 -I.
-              # Link without fr_asm.o (fr.cpp has C++ fallback implementations)
-              g++ -o membership main.o calcwit.o fr.o membership.o -lgmp
-              echo "Witness build complete (ARM64, no asm)"
+              echo "ARM64 TARGET - cross-compiling witness for x86_64 (runs via Rosetta)..."
+              # Cross-compile to x86_64 so the witness binary runs via Rosetta 2
+              # This avoids the fr.asm x86_64 assembly issue entirely
+              make CFLAGS="-arch x86_64" CXXFLAGS="-arch x86_64" LDFLAGS="-arch x86_64"
+              echo "Witness build complete (x86_64 binary for Rosetta)"
+              file membership
               exit 0
             fi
             # x64 target - use standard Makefile with x86 assembly
