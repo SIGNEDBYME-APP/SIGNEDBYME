@@ -56,28 +56,32 @@ jobs:
         run: |
           choco install cmake nasm -y
 
+      - name: Setup MSBuild
+        if: runner.os == 'Windows'
+        uses: microsoft/setup-msbuild@v2
+
       - name: Build GMP (macOS only)
         if: runner.os == 'macOS'
         working-directory: native/rapidsnark
         run: |
           ./build_gmp.sh ${{ matrix.rapidsnark_target }}
+          # For ARM64, also build x86_64 GMP for cross-compiling witness
+          if [ "${{ matrix.target }}" = "macos-arm64" ]; then
+            ./build_gmp.sh macos_x86_64
+          fi
 
       - name: Build GMP for MSVC (Windows)
         if: runner.os == 'Windows'
         shell: cmd
         run: |
           git clone --depth 1 https://github.com/BrianGladman/gmp.git gmp-gladman
-          cd gmp-gladman
-          echo === Repository structure ===
-          dir /s /b *.sln
-          dir /s /b *.vcxproj
-          cd build.vc
-          msbuild gmp.sln /p:Configuration=Release /p:Platform=x64 /m /v:minimal || exit /b 1
-          cd ..
+          cd gmp-gladman\SMP
+          echo === Building libgmp.sln ===
+          msbuild libgmp.sln /p:Configuration=Release /p:Platform=x64 /m /v:minimal || exit /b 1
+          cd ..\..
           echo === Looking for built files ===
-          dir /s /b *.lib
-          dir /s /b gmp.h
-          cd ..
+          dir /s gmp-gladman\*.lib
+          dir /s gmp-gladman\gmp.h
           mkdir native\rapidsnark\depends\gmp\package\lib
           mkdir native\rapidsnark\depends\gmp\package\include
           for /r gmp-gladman %%f in (gmp.lib) do copy "%%f" native\rapidsnark\depends\gmp\package\lib\
@@ -136,9 +140,12 @@ jobs:
             # Use matrix.target, NOT uname -m (host may differ from target on Rosetta)
             if [ "${{ matrix.target }}" = "macos-arm64" ]; then
               echo "ARM64 TARGET - cross-compiling witness for x86_64 (runs via Rosetta)..."
-              # Cross-compile to x86_64 so the witness binary runs via Rosetta 2
-              # This avoids the fr.asm x86_64 assembly issue entirely
-              make CFLAGS="-arch x86_64" CXXFLAGS="-arch x86_64" LDFLAGS="-arch x86_64"
+              # Use x86_64 GMP for cross-compilation
+              GMP_DIR="${{ github.workspace }}/native/rapidsnark/depends/gmp/package_macos_x86_64"
+              export CPLUS_INCLUDE_PATH="${GMP_DIR}/include:${CPLUS_INCLUDE_PATH}"
+              export LIBRARY_PATH="${GMP_DIR}/lib:${LIBRARY_PATH}"
+              # Run make under Rosetta to use x86_64 toolchain
+              arch -x86_64 make
               echo "Witness build complete (x86_64 binary for Rosetta)"
               file membership
               exit 0
