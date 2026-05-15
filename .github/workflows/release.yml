@@ -120,6 +120,8 @@ jobs:
         if: runner.os == 'Windows'
         working-directory: native/rapidsnark
         shell: cmd
+        env:
+          LIB: ${{ github.workspace }}\native\rapidsnark\depends\gmp\package\lib
         run: |
           mkdir build_prover_windows
           cd build_prover_windows
