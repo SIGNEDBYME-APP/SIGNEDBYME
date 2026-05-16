@@ -246,8 +246,6 @@ def verify_delegation_event(event: dict) -> tuple[bool, str]:
         return False, "Event ID does not match content hash"
     
     # 3. Verify Schnorr signature
-    # Note: Human pubkey verification via NIP-05 is optional for delegation
-    # The signature itself proves the human holds the private key
     if not verify_schnorr_signature(event):
         return False, "Invalid Schnorr signature on delegation event"
     
