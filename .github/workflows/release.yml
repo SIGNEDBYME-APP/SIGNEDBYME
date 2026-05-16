@@ -120,12 +120,18 @@ jobs:
         if: runner.os == 'Windows'
         working-directory: native/rapidsnark
         shell: cmd
-        env:
-          LIB: ${{ github.workspace }}\native\rapidsnark\depends\gmp\package\lib
         run: |
           mkdir build_prover_windows
           cd build_prover_windows
-          cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DUSE_ASM=OFF -DGMP_PREFIX=..\depends\gmp\package -DGMP_INCLUDE_DIR=..\depends\gmp\package\include -DGMP_LIB_DIR=..\depends\gmp\package\lib
+          
+          REM Copy gmp.lib to build directory so linker can find it
+          copy ..\depends\gmp\package\lib\gmp.lib .
+          
+          REM Also create src\Release and copy there (where link step runs)
+          mkdir src\Release
+          copy ..\depends\gmp\package\lib\gmp.lib src\Release\
+          
+          cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DUSE_ASM=OFF -DGMP_PREFIX=..\depends\gmp\package -DGMP_INCLUDE_DIR=..\depends\gmp\package\include -DGMP_LIB_DIR=..\depends\gmp\package\lib -DCMAKE_SHARED_LINKER_FLAGS="/LIBPATH:..\depends\gmp\package\lib"
           cmake --build . --config Release --target rapidsnark
 
       - name: Build witness calculator
