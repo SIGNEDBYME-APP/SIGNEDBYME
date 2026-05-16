@@ -2,6 +2,7 @@
   "demo": {
     "name": "SignedByMe Demo",
     "domain": "signedbyme.com",
+    "enterprise_npub": "npub1803up3e9w2zehsjryspkzely66hkt8rf93k2qya7ngrng942nzgsrnwdv8",
     "require_membership": true
   }
 }
