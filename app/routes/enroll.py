@@ -93,11 +93,19 @@ def get_client_config(client_id: str) -> Optional[dict]:
 def get_nip05_pubkey(client_id: str) -> Optional[str]:
     """
     Fetch enterprise pubkey via NIP-05.
-    Looks up https://{client_id}.signedbyme.com/.well-known/nostr.json
+    Looks up enterprise's domain from clients.json, then fetches:
+    https://{enterprise_domain}/.well-known/nostr.json
     Returns hex pubkey or None.
     """
-    # Map client_id to domain
-    nip05_url = f"https://{client_id}.signedbyme.com/.well-known/nostr.json"
+    # Get enterprise domain from clients.json
+    clients = load_clients()
+    config = clients.get(client_id, {})
+    enterprise_domain = config.get("domain")
+    if not enterprise_domain:
+        logger.warning(f"No domain configured for client {client_id}")
+        return None
+    
+    nip05_url = f"https://{enterprise_domain}/.well-known/nostr.json"
     
     try:
         with httpx.Client(timeout=5.0) as client:
