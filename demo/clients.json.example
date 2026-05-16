@@ -1,0 +1,7 @@
+{
+  "demo": {
+    "name": "SignedByMe Demo",
+    "domain": "signedbyme.com",
+    "require_membership": true
+  }
+}
