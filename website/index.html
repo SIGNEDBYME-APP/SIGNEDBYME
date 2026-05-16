@@ -24,7 +24,7 @@
                 <a href="#for-humans">For Humans</a>
                 <a href="#for-agents">For Agents</a>
                 <a href="#for-enterprises">For Enterprises</a>
-                <a href="#demo">Live Feed</a>
+                <a href="#demo">Try Demo</a>
                 <a href="#pricing">Pricing</a>
                 <a href="#download" class="nav-cta">Download SDK</a>
             </div>
@@ -474,30 +474,266 @@ token = await client.login(
         </div>
     </section>
 
-    <!-- Live Feed -->
+    <!-- Try SignedByMe Demo -->
     <section id="demo" class="section section-alt">
         <div class="container">
-            <h2>Live Feed</h2>
+            <h2>Try <span class="brand-name">SIGNEDBYME</span> Live</h2>
             <p class="section-intro">
-                Real-time <span class="brand-name">SIGNEDBYME</span> events from our production NOSTR relays. 
-                Watch Groth16 proofs, delegations, and authentications as they happen.
+                Experience the full agent authorization flow. 
+                Your agent will be authorized to access our demo enterprise.
             </p>
             
-            <div id="demo-container" class="demo-container">
-                <div class="demo-header">
-                    <h3>🔴 Live NOSTR Event Feed</h3>
-                </div>
-                <div id="event-feed" class="event-feed">
-                    <!-- Events load here via JS -->
-                    <div class="event-placeholder">
-                        <p>Connecting to relay...</p>
+            <div id="demo-container" class="demo-wizard">
+                <!-- Step 0: Introduction -->
+                <div id="step-0" class="wizard-step active">
+                    <div class="wizard-intro">
+                        <h3>🔐 Authorize Your Agent</h3>
+                        <p>This demo walks you through the complete SignedByMe genesis flow — all 3 gates.</p>
+                        
+                        <div class="requirements-box">
+                            <h4>Requirements:</h4>
+                            <ul>
+                                <li>SignedByMe SDK running on your device</li>
+                                <li>A NOSTR client for signing (NIP-07 extension like Alby or nos2x)</li>
+                                <li>A NIP-05 verified identity (e.g., you@primal.net, you@getalby.com)</li>
+                            </ul>
+                        </div>
+                        
+                        <button id="btn-start-demo" class="btn btn-primary btn-large">Start Demo</button>
                     </div>
                 </div>
-                <div class="event-legend">
-                    <span class="legend-item"><span class="event-dot auth"></span> Authorization (28200)</span>
-                    <span class="legend-item"><span class="event-dot delegation"></span> Delegation (28250)</span>
-                    <span class="legend-item"><span class="event-dot proof"></span> Proof (28101)</span>
-                    <span class="legend-item"><span class="event-dot complete"></span> Login (28103)</span>
+                
+                <!-- Steps 1-8: Two-column layout -->
+                <div id="wizard-main" class="wizard-main" style="display: none;">
+                    <!-- Left Panel: Step Content -->
+                    <div class="wizard-panel wizard-left">
+                        <div class="step-indicator">
+                            <span id="step-label">STEP 1 of 8</span>
+                        </div>
+                        
+                        <!-- Step 1: Enterprise Login -->
+                        <div id="step-1" class="step-content active">
+                            <h3>🏢 Enterprise Login</h3>
+                            <p>Log in to Demo Enterprise to begin.</p>
+                            
+                            <form id="login-form" class="demo-form">
+                                <div class="form-group">
+                                    <label for="login-email">Email:</label>
+                                    <input type="email" id="login-email" placeholder="you@example.com" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="login-password">Password:</label>
+                                    <input type="password" id="login-password" placeholder="any password works" required>
+                                </div>
+                                <p class="form-hint">(any password works for demo)</p>
+                                <button type="submit" class="btn btn-primary">Log In</button>
+                            </form>
+                            
+                            <!-- After login -->
+                            <div id="login-success" class="step-success" style="display: none;">
+                                <p class="success-check">✅ Logged in as: <strong id="logged-email"></strong></p>
+                                <p>Welcome to Demo Enterprise!</p>
+                                <p>Ready to authorize your AI agent?</p>
+                                <button id="btn-authorize" class="btn btn-primary">Authorize your Agent</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 2: Lightning Payment -->
+                        <div id="step-2" class="step-content">
+                            <h3>⚡ Subscription Payment</h3>
+                            <p>Monthly subscription required for agent identity creation.</p>
+                            
+                            <div class="payment-box">
+                                <div class="payment-demo">
+                                    <span class="demo-badge">DEMO MODE</span>
+                                    <p>Payment Simulated</p>
+                                    <p class="sats-amount">⚡ 1,000 sats</p>
+                                </div>
+                            </div>
+                            
+                            <button id="btn-simulate-payment" class="btn btn-primary">Simulate Payment</button>
+                            
+                            <!-- After payment -->
+                            <div id="payment-success" class="step-success" style="display: none;">
+                                <p class="success-check">✅ Payment confirmed!</p>
+                                <p>Preimage received: <code id="demo-preimage">a1b2c3...</code></p>
+                                <button id="btn-to-gate1" class="btn btn-primary">Continue to Gate 1</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 3: Gate 1 -->
+                        <div id="step-3" class="step-content">
+                            <h3>🏢 Gate 1: Enterprise Invitation</h3>
+                            <p>Demo Enterprise is inviting your agent.</p>
+                            
+                            <div class="challenge-box">
+                                <p>Challenge Code:</p>
+                                <div class="challenge-code" id="challenge-code">----</div>
+                            </div>
+                            
+                            <p class="instruction">Enter this code in your SignedByMe SDK.</p>
+                            <p class="waiting" id="gate1-waiting">⏳ Waiting for agent response...</p>
+                            
+                            <!-- After agent responds -->
+                            <div id="gate1-success" class="step-success" style="display: none;">
+                                <p class="success-check">✅ Agent responded!</p>
+                                <p>Email: <strong id="agent-email"></strong></p>
+                                <p>Agent: <code id="agent-npub"></code></p>
+                                <button id="btn-to-gate2" class="btn btn-primary">Continue to Gate 2</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 4: Gate 2 -->
+                        <div id="step-4" class="step-content">
+                            <h3>👤 Gate 2: Human Authorization</h3>
+                            <p>Enterprise authorized your agent. Now YOU must grant delegation.</p>
+                            
+                            <p class="instruction">Sign kind 28250 with your NOSTR client:</p>
+                            
+                            <button id="btn-sign-nip07" class="btn btn-primary">Sign with NIP-07</button>
+                            
+                            <p class="waiting" id="gate2-waiting">⏳ Waiting for signature...</p>
+                            
+                            <!-- After human signs -->
+                            <div id="gate2-success" class="step-success" style="display: none;">
+                                <p class="success-check">✅ Delegation signed!</p>
+                                <p>Scopes: <strong id="delegation-scopes">demo:full</strong></p>
+                                <p>Expires: <strong id="delegation-expires">30 days</strong></p>
+                                <button id="btn-to-gate3" class="btn btn-primary">Continue to Gate 3</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 5: Gate 3 -->
+                        <div id="step-5" class="step-content">
+                            <h3>🌳 Gate 3: Merkle Enrollment</h3>
+                            <p>Agent calling /v1/membership/enroll/commit</p>
+                            
+                            <div class="enrollment-box">
+                                <p>leaf_commitment:</p>
+                                <code id="leaf-commitment">0x7f3a...</code>
+                            </div>
+                            
+                            <p class="waiting" id="gate3-waiting">⏳ Enrolling...</p>
+                            
+                            <!-- After enrollment -->
+                            <div id="gate3-success" class="step-success" style="display: none;">
+                                <p class="success-check">✅ Enrolled!</p>
+                                <p>Your agent is now in the Merkle tree.</p>
+                                <div class="genesis-complete">═══ GENESIS COMPLETE ═══</div>
+                                <button id="btn-to-login" class="btn btn-primary">Continue to Login</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 6: Proof Generation -->
+                        <div id="step-6" class="step-content">
+                            <h3>🔐 Generate ZK Proof</h3>
+                            <p>Agent generating Groth16 proof...</p>
+                            
+                            <div class="proof-box">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="proof-progress"></div>
+                                </div>
+                                <p class="progress-text" id="proof-text">0% - Starting...</p>
+                            </div>
+                            
+                            <div class="proof-inputs">
+                                <p>Private inputs:</p>
+                                <ul>
+                                    <li id="input-leaf">• leaf_secret ⏳</li>
+                                    <li id="input-siblings">• siblings ⏳</li>
+                                    <li id="input-pathbits">• path_bits ⏳</li>
+                                    <li id="input-nsec">• nsec (derived) ⏳</li>
+                                </ul>
+                            </div>
+                            
+                            <!-- After proof -->
+                            <div id="proof-success" class="step-success" style="display: none;">
+                                <p class="success-check">✅ Proof generated!</p>
+                                <p>Public outputs:</p>
+                                <ul>
+                                    <li>merkle_root: <code id="merkle-root">0x8b2c...</code></li>
+                                    <li>npub: <code id="proof-npub">npub1abc...</code></li>
+                                </ul>
+                                <button id="btn-to-verify" class="btn btn-primary">Continue to Login</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 7: Login Complete -->
+                        <div id="step-7" class="step-content">
+                            <h3>✅ Login Complete!</h3>
+                            <p>Your agent is now authorized.</p>
+                            
+                            <div class="token-box">
+                                <h4>OIDC Token Received</h4>
+                                <div class="token-claims">
+                                    <p>sub: <code id="token-sub">npub1abc...</code></p>
+                                    <p>iss: <code>api.signedbyme.com</code></p>
+                                    <p>aud: <code>demo</code></p>
+                                    <p>membership: <code>true</code></p>
+                                    <p>amr: <code>["zk_membership"]</code></p>
+                                    <p>exp: <code>1hr</code></p>
+                                </div>
+                            </div>
+                            
+                            <button id="btn-to-revoke" class="btn btn-secondary">Continue →</button>
+                        </div>
+                        
+                        <!-- Step 8: Revocation -->
+                        <div id="step-8" class="step-content">
+                            <h3>🚫 Revocation (The Kill Switch)</h3>
+                            <p>You can revoke your agent's access at any time by publishing a kind 28251 event.</p>
+                            
+                            <div class="revoke-info">
+                                <p><strong>SignedByMe has NO revoke button.</strong></p>
+                                <p>You control revocation with your own NOSTR client.</p>
+                            </div>
+                            
+                            <div class="revoke-options">
+                                <h4>How to Revoke:</h4>
+                                <ul>
+                                    <li><strong>Option A:</strong> Use a NOSTR CLI (nak, nostril)</li>
+                                    <li><strong>Option B:</strong> Use a web tool (nostrtool.com)</li>
+                                    <li><strong>Option C:</strong> Use demo's Revocation Helper (NIP-07 signing)</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="revoke-format">
+                                <h4>Required event format:</h4>
+                                <pre>{
+  "kind": 28251,
+  "tags": [["d", "<span id="revoke-delegation-id">del_abc123</span>"]],
+  "content": "{}",
+  "pubkey": "&lt;your_human_npub_hex&gt;"
+}</pre>
+                            </div>
+                            
+                            <p>Sign with the same NOSTR identity you used for delegation (Gate 2).</p>
+                            
+                            <div class="demo-complete">
+                                <button id="btn-try-again" class="btn btn-primary">Try Again</button>
+                                <button id="btn-done" class="btn btn-secondary">Done</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Panel: Live Event Feed -->
+                    <div class="wizard-panel wizard-right">
+                        <div class="feed-header">
+                            <h4>Live Event Feed</h4>
+                            <span class="feed-status" id="feed-status">🟢 Connected</span>
+                        </div>
+                        <div id="event-feed" class="event-feed">
+                            <!-- Events appear here -->
+                        </div>
+                        <div class="event-legend">
+                            <span class="legend-item"><span class="event-dot auth"></span> 28200</span>
+                            <span class="legend-item"><span class="event-dot response"></span> 28202</span>
+                            <span class="legend-item"><span class="event-dot delegation"></span> 28250</span>
+                            <span class="legend-item"><span class="event-dot proof"></span> 28101</span>
+                            <span class="legend-item"><span class="event-dot complete"></span> 28103</span>
+                            <span class="legend-item"><span class="event-dot revocation"></span> 28251</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

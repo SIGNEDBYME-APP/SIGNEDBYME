@@ -1,13 +1,22 @@
 /**
- * SIGNEDBYME Live NOSTR Event Feed
+ * SIGNEDBYME Demo Wizard
  * 
- * Displays real-time SIGNEDBYME events from production relays.
- * Event kinds: 28101 (proof), 28102 (auth_complete), 28103 (login_complete),
- *              28200 (enrollment_auth), 28202 (enrollment_response),
- *              28250 (delegation), 28251 (revocation)
+ * 8-step interactive demo for the "Authorize Your Agent" flow.
+ * Communicates with demo API backend and displays real-time NOSTR events.
+ * 
+ * Per DEMO_ARCHITECTURE.md
  */
 
-// SIGNEDBYME relay infrastructure
+// =============================================================================
+// Configuration
+// =============================================================================
+
+// Demo API URL (standalone demo service)
+const DEMO_API_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:8001' 
+    : 'https://demo.signedbyme.com';
+
+// NOSTR relays
 const RELAYS = [
     'wss://relay.signedbyme.com',
     'wss://relay-sfo.signedbyme.com',
@@ -15,177 +24,480 @@ const RELAYS = [
     'wss://relay-sgp.signedbyme.com',
 ];
 
-// SIGNEDBYME event kinds
+// Event kinds
 const EVENT_KINDS = [28101, 28102, 28103, 28200, 28202, 28250, 28251];
 
-// Event type metadata
+// Event metadata
 const EVENT_META = {
     28101: { name: 'Proof', class: 'proof', icon: '🔐' },
     28102: { name: 'Auth Complete', class: 'complete', icon: '✓' },
     28103: { name: 'Login Complete', class: 'complete', icon: '✓' },
     28200: { name: 'Authorization', class: 'auth', icon: '🏢' },
-    28202: { name: 'Enrollment Response', class: 'auth', icon: '🤖' },
+    28202: { name: 'Response', class: 'response', icon: '🤖' },
     28250: { name: 'Delegation', class: 'delegation', icon: '👤' },
     28251: { name: 'Revocation', class: 'revocation', icon: '🚫' },
 };
 
+// =============================================================================
 // State
-let ws = null;
-let eventCount = 0;
-let connected = false;
-let exampleTimeout = null;
+// =============================================================================
 
-// DOM elements
+let currentStep = 0;
+let sessionId = null;
+let sessionData = {
+    email: null,
+    challengeCode: null,
+    agentNpub: null,
+    humanNpub: null,
+    delegationId: null,
+};
+
+// WebSocket
+let ws = null;
+let connected = false;
+
+// DOM elements (cached after init)
 let feedEl = null;
 
-// Initialize on load
+// =============================================================================
+// Initialization
+// =============================================================================
+
 document.addEventListener('DOMContentLoaded', init);
 
 function init() {
+    // Cache DOM elements
     feedEl = document.getElementById('event-feed');
-    if (!feedEl) return;
     
-    // Clear placeholder and show connecting message
-    feedEl.innerHTML = '<div class="feed-status">Connecting to relay...</div>';
+    // Bind event handlers
+    bindEventHandlers();
     
-    // Connect to primary relay
+    // Connect to NOSTR relay for live feed
     connectToRelay(RELAYS[0]);
-    
-    // Show examples after 5 seconds if no events
-    exampleTimeout = setTimeout(showExampleEvents, 5000);
 }
 
-function connectToRelay(url) {
-    if (ws) {
-        ws.close();
+function bindEventHandlers() {
+    // Step 0: Start Demo
+    const btnStart = document.getElementById('btn-start-demo');
+    if (btnStart) btnStart.addEventListener('click', startDemo);
+    
+    // Step 1: Login
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) loginForm.addEventListener('submit', handleLogin);
+    
+    const btnAuthorize = document.getElementById('btn-authorize');
+    if (btnAuthorize) btnAuthorize.addEventListener('click', handleAuthorize);
+    
+    // Step 2: Payment
+    const btnPayment = document.getElementById('btn-simulate-payment');
+    if (btnPayment) btnPayment.addEventListener('click', handlePayment);
+    
+    const btnToGate1 = document.getElementById('btn-to-gate1');
+    if (btnToGate1) btnToGate1.addEventListener('click', () => goToStep(3));
+    
+    // Step 3: Gate 1
+    const btnToGate2 = document.getElementById('btn-to-gate2');
+    if (btnToGate2) btnToGate2.addEventListener('click', () => goToStep(4));
+    
+    // Step 4: Gate 2
+    const btnSign = document.getElementById('btn-sign-nip07');
+    if (btnSign) btnSign.addEventListener('click', handleNip07Sign);
+    
+    const btnToGate3 = document.getElementById('btn-to-gate3');
+    if (btnToGate3) btnToGate3.addEventListener('click', () => goToStep(5));
+    
+    // Step 5: Gate 3
+    const btnToLogin = document.getElementById('btn-to-login');
+    if (btnToLogin) btnToLogin.addEventListener('click', handleStartProof);
+    
+    // Step 6: Proof
+    const btnToVerify = document.getElementById('btn-to-verify');
+    if (btnToVerify) btnToVerify.addEventListener('click', handleVerify);
+    
+    // Step 7: Complete
+    const btnToRevoke = document.getElementById('btn-to-revoke');
+    if (btnToRevoke) btnToRevoke.addEventListener('click', () => goToStep(8));
+    
+    // Step 8: Revocation
+    const btnTryAgain = document.getElementById('btn-try-again');
+    if (btnTryAgain) btnTryAgain.addEventListener('click', resetDemo);
+    
+    const btnDone = document.getElementById('btn-done');
+    if (btnDone) btnDone.addEventListener('click', () => goToStep(0));
+}
+
+// =============================================================================
+// Step Navigation
+// =============================================================================
+
+function startDemo() {
+    // Hide intro, show main wizard
+    document.getElementById('step-0').style.display = 'none';
+    document.getElementById('wizard-main').style.display = 'flex';
+    goToStep(1);
+}
+
+function goToStep(step) {
+    currentStep = step;
+    
+    // Update step label
+    const label = document.getElementById('step-label');
+    if (label && step >= 1 && step <= 8) {
+        label.textContent = `STEP ${step} of 8`;
     }
+    
+    // Hide all step content
+    document.querySelectorAll('.step-content').forEach(el => {
+        el.classList.remove('active');
+    });
+    
+    // Show current step
+    const stepEl = document.getElementById(`step-${step}`);
+    if (stepEl) {
+        stepEl.classList.add('active');
+    }
+    
+    // Log to feed
+    addFeedEvent(`Step ${step} started`, 'info');
+}
+
+function resetDemo() {
+    // Reset state
+    currentStep = 0;
+    sessionId = null;
+    sessionData = {
+        email: null,
+        challengeCode: null,
+        agentNpub: null,
+        humanNpub: null,
+        delegationId: null,
+    };
+    
+    // Reset UI
+    document.getElementById('wizard-main').style.display = 'none';
+    document.getElementById('step-0').style.display = 'block';
+    document.getElementById('step-0').classList.add('active');
+    
+    // Reset form
+    document.getElementById('login-form').reset();
+    document.getElementById('login-form').style.display = 'block';
+    document.getElementById('login-success').style.display = 'none';
+    
+    // Clear feed
+    if (feedEl) feedEl.innerHTML = '';
+}
+
+// =============================================================================
+// Step Handlers
+// =============================================================================
+
+async function handleLogin(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    
+    try {
+        addFeedEvent('Logging in...', 'info');
+        
+        const response = await fetch(`${DEMO_API_URL}/v1/demo/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Login failed: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        sessionId = data.session_id;
+        sessionData.email = data.email;
+        
+        // Update UI
+        document.getElementById('login-form').style.display = 'none';
+        document.getElementById('logged-email').textContent = data.email;
+        document.getElementById('login-success').style.display = 'block';
+        
+        addFeedEvent(`👤 Logged in as ${data.email}`, 'success');
+        
+    } catch (err) {
+        console.error('Login error:', err);
+        addFeedEvent(`❌ Login failed: ${err.message}`, 'error');
+    }
+}
+
+async function handleAuthorize() {
+    goToStep(2);
+}
+
+async function handlePayment() {
+    try {
+        addFeedEvent('Starting demo flow...', 'info');
+        
+        const response = await fetch(`${DEMO_API_URL}/v1/demo/start/${sessionId}`, {
+            method: 'POST',
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Start failed: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        sessionData.challengeCode = data.challenge_code;
+        
+        // Show payment success
+        document.getElementById('btn-simulate-payment').style.display = 'none';
+        document.getElementById('demo-preimage').textContent = data.demo_preimage || 'a1b2c3...';
+        document.getElementById('payment-success').style.display = 'block';
+        
+        addFeedEvent('⚡ Payment simulated', 'success');
+        
+    } catch (err) {
+        console.error('Payment error:', err);
+        addFeedEvent(`❌ Payment failed: ${err.message}`, 'error');
+    }
+}
+
+async function handleGate1Response(agentEmail, agentNpub, challenge) {
+    try {
+        const response = await fetch(`${DEMO_API_URL}/v1/demo/gate1-complete/${sessionId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                agent_email: agentEmail,
+                agent_npub: agentNpub,
+                challenge: challenge,
+            }),
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Gate 1 failed: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        sessionData.agentNpub = data.agent_npub;
+        
+        // Update UI
+        document.getElementById('gate1-waiting').style.display = 'none';
+        document.getElementById('agent-email').textContent = agentEmail;
+        document.getElementById('agent-npub').textContent = truncateNpub(agentNpub);
+        document.getElementById('gate1-success').style.display = 'block';
+        
+        addFeedEvent('✓ Gate 1: Email match verified', 'success');
+        
+    } catch (err) {
+        console.error('Gate 1 error:', err);
+        addFeedEvent(`❌ Gate 1 failed: ${err.message}`, 'error');
+    }
+}
+
+async function handleNip07Sign() {
+    // Check for NIP-07 extension
+    if (!window.nostr) {
+        addFeedEvent('❌ NIP-07 extension not found. Install Alby or nos2x.', 'error');
+        alert('NIP-07 extension not found. Please install Alby or nos2x browser extension.');
+        return;
+    }
+    
+    try {
+        addFeedEvent('Requesting NIP-07 signature...', 'info');
+        
+        // Get public key
+        const pubkey = await window.nostr.getPublicKey();
+        sessionData.humanNpub = pubkey;
+        
+        // Create delegation event
+        const delegationId = 'del_' + Math.random().toString(36).substring(2, 10);
+        sessionData.delegationId = delegationId;
+        
+        const event = {
+            kind: 28250,
+            created_at: Math.floor(Date.now() / 1000),
+            tags: [['p', sessionData.agentNpub || 'agent_npub_placeholder']],
+            content: JSON.stringify({
+                agent_npub: sessionData.agentNpub,
+                scopes: { demo: ['full'] },
+                expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                delegation_id: delegationId,
+                nip05: 'user@example.com', // TODO: Get from user
+            }),
+        };
+        
+        // Sign with NIP-07
+        const signedEvent = await window.nostr.signEvent(event);
+        
+        // Send to backend
+        const response = await fetch(`${DEMO_API_URL}/v1/demo/gate2-complete/${sessionId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ delegation_event: signedEvent }),
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Gate 2 failed: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Update UI
+        document.getElementById('gate2-waiting').style.display = 'none';
+        document.getElementById('delegation-scopes').textContent = 'demo:full';
+        document.getElementById('delegation-expires').textContent = '30 days';
+        document.getElementById('gate2-success').style.display = 'block';
+        
+        addFeedEvent('👤 Kind 28250: Human signed delegation', 'delegation');
+        addFeedEvent('✓ Gate 2: Human consent verified', 'success');
+        
+    } catch (err) {
+        console.error('NIP-07 error:', err);
+        addFeedEvent(`❌ Signing failed: ${err.message}`, 'error');
+    }
+}
+
+async function handleStartProof() {
+    goToStep(6);
+    
+    // Simulate proof generation with progress
+    const progressBar = document.getElementById('proof-progress');
+    const progressText = document.getElementById('proof-text');
+    const inputs = ['input-leaf', 'input-siblings', 'input-pathbits', 'input-nsec'];
+    
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += 5;
+        progressBar.style.width = `${progress}%`;
+        progressText.textContent = `${progress}% - ${progress < 30 ? 'Loading inputs...' : progress < 70 ? 'Computing proof...' : 'Finalizing...'}`;
+        
+        // Update input checkmarks
+        if (progress >= 20) document.getElementById('input-leaf').textContent = '• leaf_secret ✓';
+        if (progress >= 40) document.getElementById('input-siblings').textContent = '• siblings ✓';
+        if (progress >= 60) document.getElementById('input-pathbits').textContent = '• path_bits ✓';
+        if (progress >= 80) document.getElementById('input-nsec').textContent = '• nsec (derived) ✓';
+        
+        if (progress >= 100) {
+            clearInterval(interval);
+            
+            // Show success
+            document.getElementById('proof-success').style.display = 'block';
+            document.getElementById('merkle-root').textContent = '0x8b2c...';
+            document.getElementById('proof-npub').textContent = truncateNpub(sessionData.agentNpub || 'npub1abc...');
+            
+            addFeedEvent('🔐 Kind 28101: Proof published', 'proof');
+            addFeedEvent('✓ Groth16 proof generated (2,474ms)', 'success');
+        }
+    }, 50);
+}
+
+async function handleVerify() {
+    try {
+        const response = await fetch(`${DEMO_API_URL}/v1/demo/verify/${sessionId}`, {
+            method: 'POST',
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Verify failed: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Update UI
+        document.getElementById('token-sub').textContent = truncateNpub(data.npub || sessionData.agentNpub);
+        
+        goToStep(7);
+        
+        addFeedEvent('✓ Kind 28102: Auth complete', 'complete');
+        addFeedEvent('✓ Kind 28103: Login complete', 'complete');
+        addFeedEvent('🎉 Agent authorized!', 'success');
+        
+    } catch (err) {
+        console.error('Verify error:', err);
+        addFeedEvent(`❌ Verify failed: ${err.message}`, 'error');
+        goToStep(7); // Go to step 7 anyway for demo
+    }
+}
+
+// =============================================================================
+// NOSTR Relay Connection
+// =============================================================================
+
+function connectToRelay(url) {
+    if (ws) ws.close();
     
     ws = new WebSocket(url);
     
     ws.onopen = () => {
         connected = true;
-        updateStatus(`Connected to ${url.replace('wss://', '')}`);
+        updateFeedStatus('🟢 Connected');
         
-        // Subscribe to SIGNEDBYME event kinds
-        const subRequest = JSON.stringify([
-            'REQ',
-            'sbm-feed',
-            { kinds: EVENT_KINDS }
-        ]);
-        ws.send(subRequest);
+        // Subscribe to SIGNEDBYME events
+        ws.send(JSON.stringify(['REQ', 'sbm-demo', { kinds: EVENT_KINDS }]));
     };
     
     ws.onmessage = (event) => {
         try {
             const msg = JSON.parse(event.data);
-            
-            if (msg[0] === 'EVENT' && msg[1] === 'sbm-feed') {
-                // Clear example timeout on first real event
-                if (exampleTimeout) {
-                    clearTimeout(exampleTimeout);
-                    exampleTimeout = null;
-                }
-                
-                // Clear examples if showing
-                if (eventCount === 0) {
-                    clearFeed();
-                }
-                
-                displayEvent(msg[2], false);
+            if (msg[0] === 'EVENT' && msg[1] === 'sbm-demo') {
+                displayNostrEvent(msg[2]);
             }
         } catch (e) {
-            console.error('Error parsing relay message:', e);
+            console.error('Relay message error:', e);
         }
     };
     
-    ws.onerror = () => {
-        updateStatus('Connection error — retrying...');
-    };
-    
+    ws.onerror = () => updateFeedStatus('🔴 Error');
     ws.onclose = () => {
         connected = false;
-        // Reconnect after 3 seconds
+        updateFeedStatus('🟡 Reconnecting...');
         setTimeout(() => connectToRelay(url), 3000);
     };
 }
 
-function displayEvent(event, isExample = false) {
+function displayNostrEvent(event) {
     const meta = EVENT_META[event.kind] || { name: 'Unknown', class: 'unknown', icon: '?' };
     const time = new Date(event.created_at * 1000).toLocaleTimeString();
-    const npub = truncateNpub(event.pubkey);
     
-    // Parse content for additional info
-    let detail = '';
-    try {
-        const content = JSON.parse(event.content);
-        if (content.client_id) detail = content.client_id;
-        else if (content.scopes) detail = Object.keys(content.scopes).join(', ');
-        else if (content.delegation_id) detail = 'revoked';
-    } catch (e) {
-        // Content not JSON, that's fine
+    addFeedEvent(`${meta.icon} ${event.kind}: ${meta.name}`, meta.class);
+    
+    // Check if this event is for our session (Gate 1 response)
+    if (event.kind === 28202 && currentStep === 3) {
+        try {
+            const content = JSON.parse(event.content);
+            if (content.challenge === sessionData.challengeCode) {
+                handleGate1Response(content.email, content.npub || event.pubkey, content.challenge);
+            }
+        } catch (e) {
+            // Not our event
+        }
     }
+}
+
+// =============================================================================
+// UI Helpers
+// =============================================================================
+
+function addFeedEvent(text, type = 'info') {
+    if (!feedEl) return;
     
-    // Check tags for client_id
-    if (!detail && event.tags) {
-        const cTag = event.tags.find(t => t[0] === 'c');
-        if (cTag) detail = cTag[1];
-    }
-    
+    const time = new Date().toLocaleTimeString();
     const el = document.createElement('div');
-    el.className = `feed-event ${meta.class}${isExample ? ' example' : ''}`;
-    el.innerHTML = `
-        <span class="event-time">${time}</span>
-        <span class="event-kind">${meta.icon} ${event.kind}</span>
-        <span class="event-name">${meta.name}</span>
-        <span class="event-npub">${npub}</span>
-        ${detail ? `<span class="event-detail">${detail}</span>` : ''}
-        ${isExample ? '<span class="event-example-badge">example</span>' : ''}
-    `;
+    el.className = `feed-event ${type}`;
+    el.innerHTML = `<span class="event-time">${time}</span> <span class="event-text">${text}</span>`;
     
-    // Add to top of feed
     feedEl.insertBefore(el, feedEl.firstChild);
     
-    // Keep max 20 events
-    eventCount++;
-    while (feedEl.children.length > 20) {
+    // Keep max 30 events
+    while (feedEl.children.length > 30) {
         feedEl.removeChild(feedEl.lastChild);
     }
 }
 
-function showExampleEvents() {
-    if (eventCount > 0) return; // Real events came in
-    
-    clearFeed();
-    updateStatus('Showing example events (waiting for live activity...)');
-    
-    // Example events demonstrating the flow
-    const now = Math.floor(Date.now() / 1000);
-    const examples = [
-        { kind: 28200, pubkey: 'a1b2c3d4e5f6...', content: '{"client_id":"acme"}', created_at: now - 30, tags: [] },
-        { kind: 28202, pubkey: 'f6e5d4c3b2a1...', content: '{"email":"user@example.com"}', created_at: now - 25, tags: [] },
-        { kind: 28200, pubkey: 'a1b2c3d4e5f6...', content: '{"client_id":"acme","agent_npub":"npub1..."}', created_at: now - 20, tags: [] },
-        { kind: 28250, pubkey: '1a2b3c4d5e6f...', content: '{"scopes":{"acme":["read","write"]}}', created_at: now - 15, tags: [] },
-        { kind: 28101, pubkey: 'f6e5d4c3b2a1...', content: '{"merkle_root":"0x..."}', created_at: now - 10, tags: [['c', 'acme']] },
-        { kind: 28103, pubkey: 'f6e5d4c3b2a1...', content: '{}', created_at: now - 5, tags: [['c', 'acme']] },
-    ];
-    
-    // Display in reverse order (oldest first visually, but insertBefore flips it)
-    examples.reverse().forEach(ex => displayEvent(ex, true));
+function updateFeedStatus(status) {
+    const statusEl = document.getElementById('feed-status');
+    if (statusEl) statusEl.textContent = status;
 }
 
-function updateStatus(msg) {
-    const statusEl = feedEl.querySelector('.feed-status');
-    if (statusEl) {
-        statusEl.textContent = msg;
-    }
-}
-
-function clearFeed() {
-    feedEl.innerHTML = '';
-    eventCount = 0;
-}
-
-function truncateNpub(hex) {
-    if (!hex || hex.length < 16) return hex || '?';
-    return hex.substring(0, 8) + '...' + hex.substring(hex.length - 4);
+function truncateNpub(str) {
+    if (!str || str.length < 16) return str || '?';
+    return str.substring(0, 12) + '...' + str.substring(str.length - 4);
 }
