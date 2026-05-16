@@ -124,14 +124,13 @@ jobs:
           mkdir build_prover_windows
           cd build_prover_windows
           
-          REM Copy gmp.lib to build directory so linker can find it
-          copy ..\depends\gmp\package\lib\gmp.lib .
+          REM Configure with CMake first (creates src directory)
+          cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DUSE_ASM=OFF -DGMP_PREFIX=..\depends\gmp\package -DGMP_INCLUDE_DIR=..\depends\gmp\package\include -DGMP_LIB_DIR=..\depends\gmp\package\lib
           
-          REM Also create src\Release and copy there (where link step runs)
-          mkdir src\Release
-          copy ..\depends\gmp\package\lib\gmp.lib src\Release\
+          REM Copy gmp.lib to src directory (where MSBuild linker runs from)
+          copy ..\depends\gmp\package\lib\gmp.lib src\
           
-          cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DUSE_ASM=OFF -DGMP_PREFIX=..\depends\gmp\package -DGMP_INCLUDE_DIR=..\depends\gmp\package\include -DGMP_LIB_DIR=..\depends\gmp\package\lib -DCMAKE_SHARED_LINKER_FLAGS="/LIBPATH:..\depends\gmp\package\lib"
+          REM Now build
           cmake --build . --config Release --target rapidsnark
 
       - name: Build witness calculator
