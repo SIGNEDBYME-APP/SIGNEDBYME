@@ -246,6 +246,9 @@ async function handlePayment() {
         const data = await response.json();
         sessionData.challengeCode = data.challenge_code;
         
+        // Display challenge code
+        document.getElementById('challenge-code').textContent = data.challenge_code;
+        
         // Show payment success
         document.getElementById('btn-simulate-payment').style.display = 'none';
         document.getElementById('demo-preimage').textContent = data.demo_preimage || 'a1b2c3...';
