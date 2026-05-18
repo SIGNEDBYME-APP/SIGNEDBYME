@@ -21,9 +21,6 @@ jobs:
           - target: linux-x64
             os: ubuntu-latest
             rapidsnark_target: host
-          - target: linux-arm64
-            os: ubuntu-24.04-arm64
-            rapidsnark_target: host_arm64
           - target: macos-arm64
             os: macos-latest
             rapidsnark_target: macos_arm64
@@ -98,10 +95,6 @@ jobs:
           if [ "${{ matrix.target }}" = "linux-x64" ]; then
             rm -rf build_prover && mkdir build_prover && cd build_prover
             cmake .. -DCMAKE_BUILD_TYPE=Release -DUSE_ASM=OFF -DUSE_OPENMP=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-            make -j$(nproc) rapidsnark
-          elif [ "${{ matrix.target }}" = "linux-arm64" ]; then
-            rm -rf build_prover_arm64 && mkdir build_prover_arm64 && cd build_prover_arm64
-            cmake .. -DTARGET_PLATFORM=aarch64 -DCMAKE_BUILD_TYPE=Release -DUSE_ASM=OFF -DUSE_OPENMP=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON
             make -j$(nproc) rapidsnark
           elif [ "${{ matrix.target }}" = "macos-arm64" ]; then
             rm -rf build_prover_macos_arm64 && mkdir build_prover_macos_arm64 && cd build_prover_macos_arm64
@@ -180,9 +173,6 @@ jobs:
           # Copy native libraries
           if [ "${{ matrix.target }}" = "linux-x64" ]; then
             cp native/rapidsnark/package/lib/librapidsnark.so dist/ || cp native/rapidsnark/build_prover/src/librapidsnark.so dist/
-            cp circuits/build/membership_cpp/libmembership_witness.so dist/ || cp circuits/build/membership_cpp/membership dist/membership_witness
-          elif [ "${{ matrix.target }}" = "linux-arm64" ]; then
-            cp native/rapidsnark/package_arm64/lib/librapidsnark.so dist/ || cp native/rapidsnark/build_prover_arm64/src/librapidsnark.so dist/
             cp circuits/build/membership_cpp/libmembership_witness.so dist/ || cp circuits/build/membership_cpp/membership dist/membership_witness
           elif [ "${{ matrix.target }}" = "macos-arm64" ]; then
             cp native/rapidsnark/package_macos_arm64/lib/librapidsnark.dylib dist/ || cp native/rapidsnark/build_prover_macos_arm64/src/librapidsnark.dylib dist/
