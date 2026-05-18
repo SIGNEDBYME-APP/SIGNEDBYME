@@ -14,7 +14,7 @@
 // Demo API URL (standalone demo service)
 const DEMO_API_URL = window.location.hostname === 'localhost' 
     ? 'http://localhost:8001' 
-    : 'https://demo.signedbyme.com';
+    : 'https://api.signedbyme.com';
 
 // NOSTR relays
 const RELAYS = [
