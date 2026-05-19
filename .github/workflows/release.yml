@@ -205,61 +205,6 @@ jobs:
           name: signedby-sdk-${{ matrix.target }}
           path: signedby-sdk-${{ matrix.target }}-${{ github.ref_name }}.zip
 
-  # Build napi-rs Node.js bindings for each platform
-  build-napi:
-    name: Build napi ${{ matrix.target }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
-          - target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
-          - target: x86_64-apple-darwin
-            os: macos-latest
-          - target: aarch64-apple-darwin
-            os: macos-latest
-          - target: x86_64-pc-windows-msvc
-            os: windows-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
-      - name: Install cross-compilation tools (Linux ARM64)
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-
-      - name: Install dependencies
-        working-directory: sdk/typescript/native
-        run: npm install
-
-      - name: Build napi bindings
-        working-directory: sdk/typescript/native
-        run: npx @napi-rs/cli build --platform --release --target ${{ matrix.target }}
-        env:
-          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
-
-      - name: Upload napi artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: napi-${{ matrix.target }}
-          path: sdk/typescript/native/*.node
-          if-no-files-found: error
-
   # Create GitHub Release with all artifacts
   release:
     name: Create Release
@@ -307,67 +252,9 @@ jobs:
         run: maturin publish
         continue-on-error: true  # Don't fail if version already exists
 
-  # Publish napi platform packages to npm
-  publish-napi:
-    name: Publish napi packages to npm
-    needs: [release, build-napi]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Download all napi artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: napi-*
-          path: sdk/typescript/native/artifacts
-
-      - name: List downloaded artifacts
-        run: find sdk/typescript/native/artifacts -type f
-
-      - name: Install dependencies
-        working-directory: sdk/typescript/native
-        run: npm install
-
-      - name: Move artifacts to correct locations
-        working-directory: sdk/typescript/native
-        run: |
-          # napi prepublish expects .node files in artifacts/<target>/
-          mkdir -p artifacts
-          for dir in artifacts/napi-*/; do
-            target=$(basename "$dir" | sed 's/napi-//')
-            mkdir -p "artifacts/$target"
-            cp "$dir"*.node "artifacts/$target/" || true
-          done
-          find artifacts -name "*.node" -type f
-
-      - name: Prepare platform packages
-        working-directory: sdk/typescript/native
-        run: npx @napi-rs/cli prepublish -t npm
-
-      - name: Publish platform packages
-        working-directory: sdk/typescript/native
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          # Publish each platform package
-          for pkg in npm/*; do
-            if [ -d "$pkg" ]; then
-              echo "Publishing $pkg..."
-              cd "$pkg"
-              npm publish --access public || true
-              cd ../..
-            fi
-          done
-
   publish-npm:
     name: Publish to npm
-    needs: [release, publish-napi]
+    needs: release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
