@@ -588,11 +588,19 @@ token = await client.login(
                             <h3>👤 Gate 2: Human Authorization</h3>
                             <p>Enterprise authorized your agent. Now YOU must grant delegation.</p>
                             
-                            <p class="instruction">Sign kind 28250 with your NOSTR client:</p>
+                            <p class="instruction">1. Copy this unsigned kind 28250 event:</p>
+                            <pre id="unsigned-delegation" class="code-block" style="background: #1a1a2e; padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 0.85rem; cursor: pointer;" title="Click to copy"></pre>
                             
-                            <button id="btn-sign-nip07" class="btn btn-primary">Sign with NIP-07</button>
+                            <p class="instruction" style="margin-top: 1.5rem;">2. Open your terminal and sign it with <code>nak</code>:</p>
+                            <pre class="code-block" style="background: #1a1a2e; padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 0.85rem;">nak event -k 28250 --sec &lt;your_nsec&gt; -c '&lt;content_from_above&gt;' -p &lt;agent_npub_hex&gt; | nak publish wss://relay.signedbyme.com</pre>
                             
-                            <p class="waiting" id="gate2-waiting">⏳ Waiting for signature...</p>
+                            <p class="instruction" style="margin-top: 1.5rem;">3. Paste the signed event JSON here:</p>
+                            <textarea id="signed-delegation-input" rows="6" style="width: 100%; background: #1a1a2e; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 1rem; font-family: monospace; font-size: 0.85rem;" placeholder='{"kind":28250,"pubkey":"...","sig":"..."}'></textarea>
+                            
+                            <button id="btn-submit-delegation" class="btn btn-primary" style="margin-top: 1rem;">Submit Signed Event</button>
+                            
+                            <p class="waiting" id="gate2-waiting" style="display: none;">⏳ Validating signature...</p>
+                            <p class="error" id="gate2-error" style="display: none; color: #ef4444;"></p>
                             
                             <!-- After human signs -->
                             <div id="gate2-success" class="step-success" style="display: none;">

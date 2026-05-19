@@ -100,8 +100,17 @@ function bindEventHandlers() {
     if (btnToGate2) btnToGate2.addEventListener('click', () => goToStep(4));
     
     // Step 4: Gate 2
-    const btnSign = document.getElementById('btn-sign-nip07');
-    if (btnSign) btnSign.addEventListener('click', handleNip07Sign);
+    const btnSubmitDelegation = document.getElementById('btn-submit-delegation');
+    if (btnSubmitDelegation) btnSubmitDelegation.addEventListener('click', handleSignedEventSubmit);
+    
+    // Click to copy unsigned delegation
+    const unsignedDelegation = document.getElementById('unsigned-delegation');
+    if (unsignedDelegation) {
+        unsignedDelegation.addEventListener('click', () => {
+            navigator.clipboard.writeText(unsignedDelegation.textContent);
+            addFeedEvent('📋 Copied unsigned event to clipboard', 'info');
+        });
+    }
     
     const btnToGate3 = document.getElementById('btn-to-gate3');
     if (btnToGate3) btnToGate3.addEventListener('click', () => goToStep(5));
@@ -155,6 +164,11 @@ function goToStep(step) {
     const stepEl = document.getElementById(`step-${step}`);
     if (stepEl) {
         stepEl.classList.add('active');
+    }
+    
+    // Step-specific initialization
+    if (step === 4) {
+        generateUnsignedDelegation();
     }
     
     // Log to feed
@@ -295,40 +309,95 @@ async function handleGate1Response(agentEmail, agentNpub, challenge) {
     }
 }
 
-async function handleNip07Sign() {
-    // Check for NIP-07 extension
-    if (!window.nostr) {
-        addFeedEvent('❌ NIP-07 extension not found. Install Alby or nos2x.', 'error');
-        alert('NIP-07 extension not found. Please install Alby or nos2x browser extension.');
+function generateUnsignedDelegation() {
+    // Generate delegation ID
+    const delegationId = 'del_' + Math.random().toString(36).substring(2, 10);
+    sessionData.delegationId = delegationId;
+    
+    // Calculate expiration (30 days from now)
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    
+    // Build content object
+    const content = {
+        agent_npub: sessionData.agentNpub || '<agent_npub_from_gate1>',
+        scopes: { demo: ['full'] },
+        expires_at: expiresAt,
+        delegation_id: delegationId,
+    };
+    
+    // Build unsigned event (missing pubkey and sig - human provides these)
+    const unsignedEvent = {
+        kind: 28250,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [['p', sessionData.agentNpub || '<agent_npub_hex>']],
+        content: JSON.stringify(content),
+    };
+    
+    // Display in UI
+    const displayEl = document.getElementById('unsigned-delegation');
+    if (displayEl) {
+        displayEl.textContent = JSON.stringify(unsignedEvent, null, 2);
+    }
+    
+    addFeedEvent('📝 Generated unsigned delegation event', 'info');
+}
+
+async function handleSignedEventSubmit() {
+    const textarea = document.getElementById('signed-delegation-input');
+    const errorEl = document.getElementById('gate2-error');
+    const waitingEl = document.getElementById('gate2-waiting');
+    
+    // Clear previous error
+    if (errorEl) {
+        errorEl.style.display = 'none';
+        errorEl.textContent = '';
+    }
+    
+    const inputText = textarea?.value?.trim();
+    if (!inputText) {
+        if (errorEl) {
+            errorEl.textContent = '❌ Please paste the signed event JSON';
+            errorEl.style.display = 'block';
+        }
+        return;
+    }
+    
+    // Parse JSON
+    let signedEvent;
+    try {
+        signedEvent = JSON.parse(inputText);
+    } catch (e) {
+        if (errorEl) {
+            errorEl.textContent = '❌ Invalid JSON format';
+            errorEl.style.display = 'block';
+        }
+        return;
+    }
+    
+    // Validate it's kind 28250
+    if (signedEvent.kind !== 28250) {
+        if (errorEl) {
+            errorEl.textContent = `❌ Wrong event kind: ${signedEvent.kind}, expected 28250`;
+            errorEl.style.display = 'block';
+        }
+        return;
+    }
+    
+    // Validate has signature
+    if (!signedEvent.sig || !signedEvent.pubkey) {
+        if (errorEl) {
+            errorEl.textContent = '❌ Event missing signature or pubkey. Did you sign it?';
+            errorEl.style.display = 'block';
+        }
         return;
     }
     
     try {
-        addFeedEvent('Requesting NIP-07 signature...', 'info');
+        if (waitingEl) waitingEl.style.display = 'block';
+        addFeedEvent('Submitting signed delegation...', 'info');
         
-        // Get public key
-        const pubkey = await window.nostr.getPublicKey();
-        sessionData.humanNpub = pubkey;
-        
-        // Create delegation event
-        const delegationId = 'del_' + Math.random().toString(36).substring(2, 10);
-        sessionData.delegationId = delegationId;
-        
-        const event = {
-            kind: 28250,
-            created_at: Math.floor(Date.now() / 1000),
-            tags: [['p', sessionData.agentNpub || 'agent_npub_placeholder']],
-            content: JSON.stringify({
-                agent_npub: sessionData.agentNpub,
-                scopes: { demo: ['full'] },
-                expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-                delegation_id: delegationId,
-                nip05: 'user@example.com', // TODO: Get from user
-            }),
-        };
-        
-        // Sign with NIP-07
-        const signedEvent = await window.nostr.signEvent(event);
+        // Store human pubkey
+        sessionData.humanNpub = signedEvent.pubkey;
         
         // Send to backend
         const response = await fetch(`${DEMO_API_URL}/v1/demo/gate2-complete/${sessionId}`, {
@@ -338,13 +407,14 @@ async function handleNip07Sign() {
         });
         
         if (!response.ok) {
-            throw new Error(`Gate 2 failed: ${response.status}`);
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.detail || `Gate 2 failed: ${response.status}`);
         }
         
         const data = await response.json();
         
         // Update UI
-        document.getElementById('gate2-waiting').style.display = 'none';
+        if (waitingEl) waitingEl.style.display = 'none';
         document.getElementById('delegation-scopes').textContent = 'demo:full';
         document.getElementById('delegation-expires').textContent = '30 days';
         document.getElementById('gate2-success').style.display = 'block';
@@ -353,8 +423,13 @@ async function handleNip07Sign() {
         addFeedEvent('✓ Gate 2: Human consent verified', 'success');
         
     } catch (err) {
-        console.error('NIP-07 error:', err);
-        addFeedEvent(`❌ Signing failed: ${err.message}`, 'error');
+        console.error('Gate 2 error:', err);
+        if (waitingEl) waitingEl.style.display = 'none';
+        if (errorEl) {
+            errorEl.textContent = `❌ ${err.message}`;
+            errorEl.style.display = 'block';
+        }
+        addFeedEvent(`❌ Gate 2 failed: ${err.message}`, 'error');
     }
 }
 
