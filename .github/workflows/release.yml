@@ -33,6 +33,9 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -160,6 +163,12 @@ jobs:
           # For now, skip witness calculator on Windows (can be added later)
           echo "Witness calculator build skipped on Windows (TODO)"
 
+      - name: Build signedby_sdk C FFI library
+        working-directory: native/signedby_core
+        run: |
+          cargo build --release
+          echo "signedby_sdk library built successfully"
+
       - name: Download zkey from CDN
         shell: bash
         run: |
@@ -174,11 +183,14 @@ jobs:
           if [ "${{ matrix.target }}" = "linux-x64" ]; then
             cp native/rapidsnark/package/lib/librapidsnark.so dist/ || cp native/rapidsnark/build_prover/src/librapidsnark.so dist/
             cp circuits/build/membership_cpp/libmembership_witness.so dist/ || cp circuits/build/membership_cpp/membership dist/membership_witness
+            cp native/signedby_core/target/release/libsignedby_sdk.so dist/
           elif [ "${{ matrix.target }}" = "macos-arm64" ]; then
             cp native/rapidsnark/package_macos_arm64/lib/librapidsnark.dylib dist/ || cp native/rapidsnark/build_prover_macos_arm64/src/librapidsnark.dylib dist/
             cp circuits/build/membership_cpp/membership dist/membership_witness
+            cp native/signedby_core/target/release/libsignedby_sdk.dylib dist/
           elif [ "${{ matrix.target }}" = "windows-x64" ]; then
             cp native/rapidsnark/build_prover_windows/src/Release/rapidsnark.dll dist/ || cp native/rapidsnark/build_prover_windows/Release/rapidsnark.dll dist/ || true
+            cp native/signedby_core/target/release/signedby_sdk.dll dist/ || true
             # Witness calculator not built on Windows yet
           fi
           

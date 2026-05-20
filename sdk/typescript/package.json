@@ -1,6 +1,6 @@
 {
   "name": "@signedby/sdk",
-  "version": "0.1.0-beta.3",
+  "version": "0.1.0-beta.6",
   "description": "SIGNEDBYME SDK - Human-Controlled Identity for Autonomous Agents",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -62,13 +62,8 @@
   },
   "dependencies": {
     "@noble/curves": "^1.6.0",
-    "@noble/hashes": "^1.5.0"
-  },
-  "optionalDependencies": {
-    "@signedby/core-linux-x64-gnu": "0.1.0",
-    "@signedby/core-linux-arm64-gnu": "0.1.0",
-    "@signedby/core-darwin-x64": "0.1.0",
-    "@signedby/core-darwin-arm64": "0.1.0",
-    "@signedby/core-win32-x64-msvc": "0.1.0"
+    "@noble/hashes": "^1.5.0",
+    "ffi-napi": "^4.0.3",
+    "ref-napi": "^3.0.3"
   }
 }
