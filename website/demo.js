@@ -171,6 +171,11 @@ function goToStep(step) {
         generateUnsignedDelegation();
     }
     
+    // Gate 3: Auto-call enrollment
+    if (step === 5) {
+        handleGate3Enrollment();
+    }
+    
     // Log to feed
     addFeedEvent(`Step ${step} started`, 'info');
 }
@@ -430,6 +435,66 @@ async function handleSignedEventSubmit() {
             errorEl.style.display = 'block';
         }
         addFeedEvent(`❌ Gate 2 failed: ${err.message}`, 'error');
+    }
+}
+
+async function handleGate3Enrollment() {
+    try {
+        addFeedEvent('🌳 Starting Merkle enrollment...', 'info');
+        
+        const response = await fetch(`${DEMO_API_URL}/v1/demo/gate3-complete/${sessionId}`, {
+            method: 'POST',
+        });
+        
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.detail || `Gate 3 failed: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Update UI with real values
+        const leafCommitmentEl = document.getElementById('leaf-commitment');
+        if (leafCommitmentEl) {
+            leafCommitmentEl.textContent = data.leaf_commitment;
+        }
+        
+        // Hide waiting, show success
+        const waitingEl = document.getElementById('gate3-waiting');
+        if (waitingEl) waitingEl.style.display = 'none';
+        
+        // Populate enrollment details
+        const rootEl = document.getElementById('enrollment-root');
+        if (rootEl) rootEl.textContent = data.merkle_root;
+        
+        const indexEl = document.getElementById('enrollment-index');
+        if (indexEl) indexEl.textContent = data.leaf_index;
+        
+        const successEl = document.getElementById('gate3-success');
+        if (successEl) {
+            successEl.style.display = 'block';
+        }
+        
+        // Store enrollment data
+        sessionData.leafCommitment = data.leaf_commitment;
+        sessionData.merkleRoot = data.merkle_root;
+        sessionData.leafIndex = data.leaf_index;
+        
+        addFeedEvent(`🏢 Kind 28200: Enrollment authorization (${data.kind_28200_event_id.substring(0, 12)}...)`, 'auth');
+        addFeedEvent(`🌳 Enrolled at leaf index ${data.leaf_index}`, 'success');
+        addFeedEvent('✓ Gate 3: Merkle enrollment complete', 'success');
+        addFeedEvent('═══ GENESIS COMPLETE ═══', 'success');
+        
+    } catch (err) {
+        console.error('Gate 3 error:', err);
+        addFeedEvent(`❌ Gate 3 failed: ${err.message}`, 'error');
+        
+        // Show error in UI
+        const waitingEl = document.getElementById('gate3-waiting');
+        if (waitingEl) {
+            waitingEl.textContent = `❌ ${err.message}`;
+            waitingEl.style.color = '#ef4444';
+        }
     }
 }
 

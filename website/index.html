@@ -618,7 +618,7 @@ token = await client.login(
                             
                             <div class="enrollment-box">
                                 <p>leaf_commitment:</p>
-                                <code id="leaf-commitment">0x7f3a...</code>
+                                <code id="leaf-commitment">⏳ generating...</code>
                             </div>
                             
                             <p class="waiting" id="gate3-waiting">⏳ Enrolling...</p>
@@ -627,6 +627,10 @@ token = await client.login(
                             <div id="gate3-success" class="step-success" style="display: none;">
                                 <p class="success-check">✅ Enrolled!</p>
                                 <p>Your agent is now in the Merkle tree.</p>
+                                <div class="enrollment-details" style="background: #1a1a2e; padding: 1rem; border-radius: 8px; margin: 1rem 0; font-family: monospace; font-size: 0.85rem;">
+                                    <p>merkle_root: <code id="enrollment-root">—</code></p>
+                                    <p>leaf_index: <code id="enrollment-index">—</code></p>
+                                </div>
                                 <div class="genesis-complete">═══ GENESIS COMPLETE ═══</div>
                                 <button id="btn-to-login" class="btn btn-primary">Continue to Login</button>
                             </div>

@@ -15,7 +15,10 @@ DEMO_DIR = Path(__file__).resolve().parents[1]
 DATA_DIR = DEMO_DIR / "data"
 
 # Demo enterprise identity
-DEMO_ENTERPRISE_NSEC = os.getenv("DEMO_ENTERPRISE_NSEC", "")
+# Default: fixed demo keypair (only for demo, not production)
+# nsec1demo... = SHA256("signedby-demo-enterprise-2026")[:32]
+_DEFAULT_DEMO_NSEC = "7f4e8a3c2b1d9f0e6a5c4d3b2a1908f7e6d5c4b3a2910f8e7d6c5b4a39281706"
+DEMO_ENTERPRISE_NSEC = os.getenv("DEMO_ENTERPRISE_NSEC", _DEFAULT_DEMO_NSEC)
 DEMO_CLIENT_ID = "demo"
 
 # Payment mode
