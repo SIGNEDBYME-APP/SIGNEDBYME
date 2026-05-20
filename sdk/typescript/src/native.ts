@@ -1,29 +1,27 @@
 /**
  * Native binding loader for SIGNEDBYME core.
  *
- * This module loads the C FFI library for the current platform using ffi-napi.
+ * This module loads the C FFI library for the current platform using koffi.
  * The native code is built from Rust and exposes a C-compatible interface.
  */
 
 /* eslint-disable @typescript-eslint/no-var-requires */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { platform, arch } from 'os';
+import { platform } from 'os';
 import { join } from 'path';
 import { existsSync } from 'fs';
 
-// Lazy load ffi-napi to avoid errors if not installed
-let ffi: any;
-let ref: any;
+// Lazy load koffi to avoid errors if not installed
+let koffi: any;
 
-function loadFfi() {
-  if (!ffi) {
+function loadKoffi() {
+  if (!koffi) {
     try {
-      ffi = require('ffi-napi');
-      ref = require('ref-napi');
+      koffi = require('koffi');
     } catch (e) {
       throw new Error(
-        'ffi-napi is required for native bindings. Install with: npm install ffi-napi ref-napi'
+        'koffi is required for native bindings. Install with: npm install koffi'
       );
     }
   }
@@ -66,54 +64,56 @@ let initialized = false;
 let agentNpub: string | null = null;
 let agentDid: string | null = null;
 
-// C FFI library instance
-let lib: any = null;
+// C FFI functions
+let ffi: {
+  agent_initialize: () => number;
+  agent_initialize_with_path: (path: string) => number;
+  agent_is_initialized: () => number;
+  agent_shutdown: () => number;
+  agent_get_npub: () => string | null;
+  agent_get_did: () => string | null;
+  agent_get_leaf_commitment: () => string | null;
+  agent_enroll: (clientId: string) => number;
+  agent_authenticate: (clientId: string) => string | null;
+  agent_check_delegation: (clientId: string) => number;
+  agent_setup_wallet: (nwcUri: string) => number;
+  agent_get_lightning_address: () => string | null;
+  agent_create_invoice: (amountMsats: bigint, memo: string) => string | null;
+  agent_pay_invoice: (invoice: string) => string | null;
+  agent_get_balance: () => bigint;
+  agent_sdk_version: () => string | null;
+  agent_string_free: (ptr: any) => void;
+} | null = null;
 
 function loadLibrary() {
-  if (lib) return lib;
+  if (ffi) return ffi;
   
-  loadFfi();
+  loadKoffi();
   const libPath = findLibrary();
+  const lib = koffi.load(libPath);
   
   // Define C FFI function signatures
-  lib = ffi.Library(libPath, {
-    // Agent lifecycle
-    'agent_initialize': ['int', []],
-    'agent_initialize_with_path': ['int', ['string']],
-    'agent_is_initialized': ['int', []],
-    'agent_shutdown': ['int', []],
-    
-    // Identity
-    'agent_get_npub': ['char *', []],
-    'agent_get_did': ['char *', []],
-    'agent_get_leaf_commitment': ['char *', []],
-    
-    // Enrollment & Auth
-    'agent_enroll': ['int', ['string']],
-    'agent_authenticate': ['char *', ['string']],
-    'agent_check_delegation': ['int', ['string']],
-    
-    // Wallet
-    'agent_setup_wallet': ['int', ['string']],
-    'agent_get_lightning_address': ['char *', []],
-    'agent_create_invoice': ['char *', ['uint64', 'string']],
-    'agent_pay_invoice': ['char *', ['string']],
-    'agent_get_balance': ['int64', []],
-    
-    // Utilities
-    'agent_sdk_version': ['char *', []],
-    'agent_string_free': ['void', ['pointer']],
-  });
+  ffi = {
+    agent_initialize: lib.func('int agent_initialize()'),
+    agent_initialize_with_path: lib.func('int agent_initialize_with_path(const char* path)'),
+    agent_is_initialized: lib.func('int agent_is_initialized()'),
+    agent_shutdown: lib.func('int agent_shutdown()'),
+    agent_get_npub: lib.func('const char* agent_get_npub()'),
+    agent_get_did: lib.func('const char* agent_get_did()'),
+    agent_get_leaf_commitment: lib.func('const char* agent_get_leaf_commitment()'),
+    agent_enroll: lib.func('int agent_enroll(const char* client_id)'),
+    agent_authenticate: lib.func('const char* agent_authenticate(const char* client_id)'),
+    agent_check_delegation: lib.func('int agent_check_delegation(const char* client_id)'),
+    agent_setup_wallet: lib.func('int agent_setup_wallet(const char* nwc_uri)'),
+    agent_get_lightning_address: lib.func('const char* agent_get_lightning_address()'),
+    agent_create_invoice: lib.func('const char* agent_create_invoice(uint64_t amount_msats, const char* memo)'),
+    agent_pay_invoice: lib.func('const char* agent_pay_invoice(const char* invoice)'),
+    agent_get_balance: lib.func('int64_t agent_get_balance()'),
+    agent_sdk_version: lib.func('const char* agent_sdk_version()'),
+    agent_string_free: lib.func('void agent_string_free(char* ptr)'),
+  };
   
-  return lib;
-}
-
-// Helper to convert C string to JS and free it
-function cStringToJs(ptr: any): string | null {
-  if (ptr.isNull()) return null;
-  const str = ptr.readCString();
-  loadLibrary().agent_string_free(ptr);
-  return str;
+  return ffi;
 }
 
 /**
@@ -168,7 +168,7 @@ const nativeBindings: NativeBindings = {
       }
       
       initialized = true;
-      agentNpub = cStringToJs(lib.agent_get_npub());
+      agentNpub = lib.agent_get_npub();
       
       // Return a client handle (just a marker object)
       return { type: 'client', delegation };
@@ -185,8 +185,8 @@ const nativeBindings: NativeBindings = {
       }
       
       initialized = true;
-      agentNpub = cStringToJs(lib.agent_get_npub());
-      agentDid = cStringToJs(lib.agent_get_did());
+      agentNpub = lib.agent_get_npub();
+      agentDid = lib.agent_get_did();
       
       // Return an agent handle
       return { type: 'agent', storagePath, npub: agentNpub };
@@ -196,7 +196,7 @@ const nativeBindings: NativeBindings = {
   getNpub(_client: unknown): string {
     if (!agentNpub) {
       const lib = loadLibrary();
-      agentNpub = cStringToJs(lib.agent_get_npub());
+      agentNpub = lib.agent_get_npub();
     }
     return agentNpub || '';
   },
@@ -204,7 +204,7 @@ const nativeBindings: NativeBindings = {
   getAgentNpub(_agent: unknown): string {
     if (!agentNpub) {
       const lib = loadLibrary();
-      agentNpub = cStringToJs(lib.agent_get_npub());
+      agentNpub = lib.agent_get_npub();
     }
     return agentNpub || '';
   },
@@ -213,8 +213,7 @@ const nativeBindings: NativeBindings = {
     const lib = loadLibrary();
     
     // Use agent_authenticate which generates proof internally
-    const tokenPtr = lib.agent_authenticate(clientId);
-    const token = cStringToJs(tokenPtr);
+    const token = lib.agent_authenticate(clientId);
     
     if (!token) {
       throw new Error('Failed to generate login proof');
