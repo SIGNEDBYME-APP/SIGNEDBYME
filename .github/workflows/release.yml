@@ -24,9 +24,6 @@ jobs:
           - target: macos-arm64
             os: macos-latest
             rapidsnark_target: macos_arm64
-          - target: windows-x64
-            os: windows-latest
-            rapidsnark_target: windows_x64
 
     steps:
       - uses: actions/checkout@v4
@@ -188,10 +185,6 @@ jobs:
             cp native/rapidsnark/package_macos_arm64/lib/librapidsnark.dylib dist/ || cp native/rapidsnark/build_prover_macos_arm64/src/librapidsnark.dylib dist/
             cp circuits/build/membership_cpp/membership dist/membership_witness
             cp native/signedby_core/target/release/libsignedby_sdk.dylib dist/
-          elif [ "${{ matrix.target }}" = "windows-x64" ]; then
-            cp native/rapidsnark/build_prover_windows/src/Release/rapidsnark.dll dist/ || cp native/rapidsnark/build_prover_windows/Release/rapidsnark.dll dist/ || true
-            cp native/signedby_core/target/release/signedby_sdk.dll dist/ || true
-            # Witness calculator not built on Windows yet
           fi
           
           # Copy witness data
