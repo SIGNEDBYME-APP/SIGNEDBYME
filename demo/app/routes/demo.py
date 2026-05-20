@@ -241,17 +241,6 @@ class DemoVerifyResponse(BaseModel):
     message: str
 
 
-class Gate3CompleteResponse(BaseModel):
-    """Gate 3 (enrollment) completion response."""
-    status: str
-    leaf_commitment: str
-    merkle_root: str
-    leaf_index: int
-    kind_28200_event_id: str
-    kind_28250_stored: bool
-    message: str
-
-
 # =============================================================================
 # Demo Enterprise NOSTR Functions
 # =============================================================================
@@ -609,9 +598,6 @@ def gate2_complete(session_id: str, body: Gate2CompleteRequest):
     
     logger.info(f"Gate 2 complete: {session_id}, human: {human_npub[:16]}...")
     
-    # Store the delegation event for Gate 3
-    session["kind_28250_event"] = event
-    
     return Gate2CompleteResponse(
         status="gate2_complete",
         human_npub=human_npub,
@@ -621,88 +607,6 @@ def gate2_complete(session_id: str, body: Gate2CompleteRequest):
         delegation_id=delegation_id or "",
         signature_valid=signature_valid,
         message="Gate 2 passed. Human consent verified. Proceeding to enrollment (Gate 3).",
-    )
-
-
-@router.post("/gate3-complete/{session_id}", response_model=Gate3CompleteResponse)
-async def gate3_complete(session_id: str):
-    """
-    Gate 3: Merkle Enrollment.
-    
-    In demo mode:
-    1. Generate mock leaf_commitment (real agent would generate from leaf_secret)
-    2. Publish kind 28200 (addressed) to authorize enrollment
-    3. Simulate enrollment by generating mock merkle_root and leaf_index
-    
-    In production: agent calls /v1/membership/enroll/commit with real data.
-    """
-    if session_id not in _sessions:
-        raise HTTPException(404, "Session not found")
-    
-    session = _sessions[session_id]
-    
-    # Verify we're at the right gate
-    if session.get("current_gate", 0) < 3:
-        raise HTTPException(400, "Must complete Gates 1-2 first")
-    
-    agent_npub = session.get("agent_npub")
-    if not agent_npub:
-        raise HTTPException(400, "Agent npub not found in session")
-    
-    # Generate mock leaf_commitment (in production: derived from agent's leaf_secret)
-    # leaf_commitment = Poseidon2(leaf_secret)
-    leaf_commitment = "0x" + hashlib.sha256(
-        f"demo-leaf-{session_id}-{agent_npub}".encode()
-    ).hexdigest()[:16]
-    
-    # Publish kind 28200 addressed (authorization for this enrollment)
-    nonce = session.get("challenge_code", secrets.token_hex(8))
-    success, signed_event = await _publish_kind_28200_addressed_async(
-        session_id, agent_npub, nonce
-    )
-    
-    event_id = signed_event["id"] if signed_event else "mock_event_id"
-    
-    # Store the signed 28200 event
-    session["kind_28200_event"] = signed_event
-    session["events"].append({
-        "kind": 28200,
-        "type": "enrollment_authorization",
-        "event_id": event_id,
-        "time": datetime.utcnow().isoformat(),
-    })
-    
-    # Mock enrollment result (in production: call /v1/membership/enroll/commit)
-    # Generate mock merkle root and leaf index
-    merkle_root = "0x" + hashlib.sha256(
-        f"demo-root-{int(time.time())}".encode()
-    ).hexdigest()[:16]
-    leaf_index = secrets.randbelow(1000)  # Random position in tree
-    
-    # Update session
-    session["leaf_commitment"] = leaf_commitment
-    session["merkle_root"] = merkle_root
-    session["leaf_index"] = leaf_index
-    session["current_gate"] = 4  # Ready for login
-    session["events"].append({
-        "kind": "enrollment",
-        "type": "merkle_enrollment",
-        "leaf_commitment": leaf_commitment,
-        "merkle_root": merkle_root,
-        "leaf_index": leaf_index,
-        "time": datetime.utcnow().isoformat(),
-    })
-    
-    logger.info(f"Gate 3 complete: {session_id}, enrolled at index {leaf_index}")
-    
-    return Gate3CompleteResponse(
-        status="gate3_complete",
-        leaf_commitment=leaf_commitment,
-        merkle_root=merkle_root,
-        leaf_index=leaf_index,
-        kind_28200_event_id=event_id,
-        kind_28250_stored=session.get("kind_28250_event") is not None,
-        message="Gate 3 passed. Agent enrolled in Merkle tree. Genesis complete!",
     )
 
 
