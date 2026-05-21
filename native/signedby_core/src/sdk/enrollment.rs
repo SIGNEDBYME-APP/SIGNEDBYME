@@ -278,9 +278,9 @@ impl EnrollmentBootstrap {
                             } else if kind == super::nostr_client::KIND_HUMAN_DELEGATION {
                                 // Check if delegation is for this agent
                                 let is_for_us = event.tags.iter().any(|t| {
-                                    let vec = t.as_vec();
-                                    vec.first().map(|s| s.as_str()) == Some("p") &&
-                                    vec.get(1).map(|s| s.contains(&agent_npub.chars().take(20).collect::<String>())).unwrap_or(false)
+                                    let slice = t.as_slice();
+                                    slice.first().map(|s| s.as_str()) == Some("p") &&
+                                    slice.get(1).map(|s| s.contains(&agent_npub.chars().take(20).collect::<String>())).unwrap_or(false)
                                 });
                                 if is_for_us {
                                     let _ = tx.send(EnrollmentEvent::Delegation(*event)).await;
@@ -294,111 +294,146 @@ impl EnrollmentBootstrap {
         });
         
         // Process events
-        let api_base_url = self.api_base_url.clone();
-        let api_client = self.api_client.clone();
+        let _api_base_url = self.api_base_url.clone();
+        let _api_client = self.api_client.clone();
         let mut on_enrollment_complete = Some(on_enrollment_complete);
         
+        // Action enum to communicate what async work to do after releasing the lock
+        enum Action {
+            None,
+            PublishResponse { client_id: String, email: String, challenge: String },
+            CheckEnrollment,
+        }
+        
         while let Some(event) = rx.recv().await {
-            let mut st = state.lock().unwrap();
-            
-            match event {
-                EnrollmentEvent::Authorization(e) => {
-                    // Check if this is open session (no p tag) or addressed to us
-                    let is_addressed = e.tags.iter().any(|t| {
-                        t.as_vec().first().map(|s| s.as_str()) == Some("p")
-                    });
-                    
-                    if !is_addressed && !st.gate1_complete {
-                        // Gate 1: Open session - respond with kind 28202
-                        eprintln!("[enrollment] Gate 1: Open session detected");
+            // All sync work inside this scope block - st goes out of scope before any await
+            let action = {
+                let mut st = state.lock().unwrap();
+                
+                match event {
+                    EnrollmentEvent::Authorization(e) => {
+                        // Check if this is open session (no p tag) or addressed to us
+                        let is_addressed = e.tags.iter().any(|t| {
+                            t.as_slice().first().map(|s| s.as_str()) == Some("p")
+                        });
                         
-                        // Extract client_id from tags
-                        let client_id = e.tags.iter()
-                            .find(|t| t.as_vec().first().map(|s| s.as_str()) == Some("c"))
-                            .and_then(|t| t.as_vec().get(1).cloned())
-                            .unwrap_or_default();
-                        
-                        // Extract challenge from content
-                        if let Ok(content) = serde_json::from_str::<serde_json::Value>(&e.content) {
-                            if let Some(challenge) = content.get("challenge").and_then(|c| c.as_str()) {
+                        if !is_addressed && !st.gate1_complete {
+                            // Gate 1: Open session - respond with kind 28202
+                            eprintln!("[enrollment] Gate 1: Open session detected");
+                            
+                            // Extract client_id from tags (try both "c" and "client_id")
+                            let client_id = e.tags.iter()
+                                .find(|t| {
+                                    let first = t.as_slice().first().map(|s| s.as_str());
+                                    first == Some("c") || first == Some("client_id")
+                                })
+                                .and_then(|t| t.as_slice().get(1).cloned())
+                                .unwrap_or_default();
+                            
+                            // Extract challenge from "nonce" tag (not content!)
+                            let challenge = e.tags.iter()
+                                .find(|t| t.as_slice().first().map(|s| s.as_str()) == Some("nonce"))
+                                .and_then(|t| t.as_slice().get(1).cloned());
+                            
+                            if let Some(challenge) = challenge {
                                 // Look up email for this enterprise
                                 if let Some(email) = email_mapping.get(&client_id) {
-                                    // Publish kind 28202 response
-                                    drop(st); // Release lock before async call
-                                    match self.nostr_client.publish_enrollment_response(
-                                        &client_id,
-                                        email,
+                                    Action::PublishResponse {
+                                        client_id,
+                                        email: email.clone(),
                                         challenge,
-                                    ).await {
-                                        Ok(event_id) => {
-                                            eprintln!("[enrollment] Gate 1: Published kind 28202: {}", event_id.to_hex());
-                                            let mut st = state.lock().unwrap();
-                                            st.gate1_complete = true;
-                                            on_gate_complete(1, "Published kind 28202 enrollment response");
-                                        }
-                                        Err(err) => {
-                                            eprintln!("[enrollment] Failed to publish 28202: {}", err);
-                                        }
                                     }
-                                    continue;
                                 } else {
                                     eprintln!("[enrollment] No email mapping for client_id: {}", client_id);
+                                    Action::None
+                                }
+                            } else {
+                                eprintln!("[enrollment] No nonce tag found in kind 28200");
+                                Action::None
+                            }
+                        } else if is_addressed {
+                            // Gate 2: Addressed authorization - store it
+                            eprintln!("[enrollment] Gate 2: Addressed authorization received");
+                            st.authorization_event = Some(e);
+                            on_gate_complete(2, "Received addressed authorization from enterprise");
+                            Action::CheckEnrollment
+                        } else {
+                            Action::None
+                        }
+                    }
+                    EnrollmentEvent::Delegation(e) => {
+                        // Gate 2→3: Human signed delegation
+                        eprintln!("[enrollment] Received delegation from human");
+                        st.delegation_event = Some(e);
+                        on_gate_complete(2, "Received kind 28250 delegation from human");
+                        Action::CheckEnrollment
+                    }
+                }
+            }; // st is OUT OF SCOPE here - safe to await below
+            
+            // Async work outside the scope
+            match action {
+                Action::PublishResponse { client_id, email, challenge } => {
+                    match self.nostr_client.publish_enrollment_response(
+                        &client_id,
+                        &email,
+                        &challenge,
+                    ).await {
+                        Ok(event_id) => {
+                            eprintln!("[enrollment] Gate 1: Published kind 28202: {}", event_id.to_hex());
+                            let mut st = state.lock().unwrap();
+                            st.gate1_complete = true;
+                            drop(st);
+                            on_gate_complete(1, "Published kind 28202 enrollment response");
+                        }
+                        Err(err) => {
+                            eprintln!("[enrollment] Failed to publish 28202: {}", err);
+                        }
+                    }
+                }
+                Action::CheckEnrollment => {
+                    // Check if we can complete enrollment (both events present)
+                    let maybe_ids = {
+                        let st = state.lock().unwrap();
+                        if let (Some(auth), Some(deleg)) = (&st.authorization_event, &st.delegation_event) {
+                            Some((auth.id.to_hex(), deleg.id.to_hex()))
+                        } else {
+                            None
+                        }
+                    }; // st out of scope
+                    
+                    if let Some((auth_id, deleg_id)) = maybe_ids {
+                        eprintln!("[enrollment] Gate 3: Both events present, calling enroll/commit");
+                        on_gate_complete(3, "Calling enrollment API");
+                        
+                        // Execute enrollment
+                        let result = self.execute_enrollment(&auth_id, &deleg_id, identity).await;
+                        
+                        match result {
+                            Ok(r) => {
+                                eprintln!("[enrollment] Enrollment complete: success={}", r.success);
+                                if let Some(callback) = on_enrollment_complete.take() {
+                                    callback(r);
+                                }
+                            }
+                            Err(e) => {
+                                eprintln!("[enrollment] Enrollment failed: {}", e);
+                                if let Some(callback) = on_enrollment_complete.take() {
+                                    callback(EnrollmentResult {
+                                        success: false,
+                                        merkle_witness: None,
+                                        merkle_root: None,
+                                        leaf_index: None,
+                                        error: Some(e.to_string()),
+                                    });
                                 }
                             }
                         }
-                    } else if is_addressed {
-                        // Gate 2: Addressed authorization - store it
-                        eprintln!("[enrollment] Gate 2: Addressed authorization received");
-                        st.authorization_event = Some(e);
-                        on_gate_complete(2, "Received addressed authorization from enterprise");
+                        
+                        break; // Done with enrollment
                     }
                 }
-                EnrollmentEvent::Delegation(e) => {
-                    // Gate 2→3: Human signed delegation
-                    eprintln!("[enrollment] Received delegation from human");
-                    st.delegation_event = Some(e);
-                    on_gate_complete(2, "Received kind 28250 delegation from human");
-                }
-            }
-            
-            // Drop the mutex guard before any await points (required for Send bound)
-            drop(st);
-            
-            // Check if we can complete enrollment (both events present)
-            let st = state.lock().unwrap();
-            if let (Some(auth), Some(deleg)) = (&st.authorization_event, &st.delegation_event) {
-                let auth_id = auth.id.to_hex();
-                let deleg_id = deleg.id.to_hex();
-                drop(st); // Release lock before async call
-                
-                eprintln!("[enrollment] Gate 3: Both events present, calling enroll/commit");
-                on_gate_complete(3, "Calling enrollment API");
-                
-                // Execute enrollment
-                let result = self.execute_enrollment(&auth_id, &deleg_id, identity).await;
-                
-                match result {
-                    Ok(r) => {
-                        eprintln!("[enrollment] Enrollment complete: success={}", r.success);
-                        if let Some(callback) = on_enrollment_complete.take() {
-                            callback(r);
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("[enrollment] Enrollment failed: {}", e);
-                        if let Some(callback) = on_enrollment_complete.take() {
-                            callback(EnrollmentResult {
-                                success: false,
-                                merkle_witness: None,
-                                merkle_root: None,
-                                leaf_index: None,
-                                error: Some(e.to_string()),
-                            });
-                        }
-                    }
-                }
-                
-                break; // Done with enrollment
+                Action::None => {}
             }
         }
         
@@ -414,14 +449,14 @@ impl EnrollmentBootstrap {
             .map(|e| {
                 // Extract client_id from tags if present
                 let client_id = e.tags.iter()
-                    .find(|t| t.as_vec().first().map(|s| s.as_str()) == Some("client_id"))
-                    .and_then(|t| t.as_vec().get(1).cloned());
+                    .find(|t| t.as_slice().first().map(|s| s.as_str()) == Some("client_id"))
+                    .and_then(|t| t.as_slice().get(1).cloned());
                 
                 // Extract custom relays from tags (Phase 29.4)
                 // Tag format: ["relays", "wss://relay1.com", "wss://relay2.com", ...]
                 let custom_relays: Vec<String> = e.tags.iter()
-                    .find(|t| t.as_vec().first().map(|s| s.as_str()) == Some("relays"))
-                    .map(|t| t.as_vec().iter().skip(1).cloned().collect())
+                    .find(|t| t.as_slice().first().map(|s| s.as_str()) == Some("relays"))
+                    .map(|t| t.as_slice().iter().skip(1).cloned().collect())
                     .unwrap_or_default();
                 
                 AuthorizationEvent {
@@ -446,8 +481,8 @@ impl EnrollmentBootstrap {
             .map(|e| {
                 // Extract agent_npub from tags
                 let agent_npub = e.tags.iter()
-                    .find(|t| t.as_vec().first().map(|s| s.as_str()) == Some("p"))
-                    .and_then(|t| t.as_vec().get(1).cloned())
+                    .find(|t| t.as_slice().first().map(|s| s.as_str()) == Some("p"))
+                    .and_then(|t| t.as_slice().get(1).cloned())
                     .unwrap_or_default();
                 
                 DelegationEvent {
