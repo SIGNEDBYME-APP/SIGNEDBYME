@@ -107,6 +107,9 @@ struct EnrollmentState {
     gate1_complete: bool,
     authorization_event: Option<Event>,
     delegation_event: Option<Event>,
+    /// Pending enrollment info (set when kind 28200 detected, waiting for human to enter challenge)
+    pending_client_id: Option<String>,
+    pending_email: Option<String>,
 }
 
 /// Enrollment event types for the state machine
@@ -301,7 +304,8 @@ impl EnrollmentBootstrap {
         // Action enum to communicate what async work to do after releasing the lock
         enum Action {
             None,
-            PublishResponse { client_id: String, email: String, challenge: String },
+            /// Notify human that enrollment request detected - they must enter challenge manually
+            NotifyEnrollmentDetected { client_id: String },
             CheckEnrollment,
         }
         
@@ -318,8 +322,9 @@ impl EnrollmentBootstrap {
                         });
                         
                         if !is_addressed && !st.gate1_complete {
-                            // Gate 1: Open session - respond with kind 28202
-                            eprintln!("[enrollment] Gate 1: Open session detected");
+                            // Gate 1: Open session detected - wait for human to enter challenge
+                            // Per Bible: "The human manually enters the challenge code into the agent"
+                            eprintln!("[enrollment] Gate 1: Open session detected - waiting for human to enter challenge");
                             
                             // Extract client_id from tags (try both "c" and "client_id")
                             let client_id = e.tags.iter()
@@ -330,25 +335,14 @@ impl EnrollmentBootstrap {
                                 .and_then(|t| t.as_slice().get(1).cloned())
                                 .unwrap_or_default();
                             
-                            // Extract challenge from "nonce" tag (not content!)
-                            let challenge = e.tags.iter()
-                                .find(|t| t.as_slice().first().map(|s| s.as_str()) == Some("nonce"))
-                                .and_then(|t| t.as_slice().get(1).cloned());
-                            
-                            if let Some(challenge) = challenge {
-                                // Look up email for this enterprise
-                                if let Some(email) = email_mapping.get(&client_id) {
-                                    Action::PublishResponse {
-                                        client_id,
-                                        email: email.clone(),
-                                        challenge,
-                                    }
-                                } else {
-                                    eprintln!("[enrollment] No email mapping for client_id: {}", client_id);
-                                    Action::None
-                                }
+                            // Look up email for this enterprise
+                            if let Some(email) = email_mapping.get(&client_id) {
+                                // Store pending enrollment info - human must call submit_challenge_code()
+                                st.pending_client_id = Some(client_id.clone());
+                                st.pending_email = Some(email.clone());
+                                Action::NotifyEnrollmentDetected { client_id }
                             } else {
-                                eprintln!("[enrollment] No nonce tag found in kind 28200");
+                                eprintln!("[enrollment] No email mapping for client_id: {}", client_id);
                                 Action::None
                             }
                         } else if is_addressed {
@@ -373,23 +367,13 @@ impl EnrollmentBootstrap {
             
             // Async work outside the scope
             match action {
-                Action::PublishResponse { client_id, email, challenge } => {
-                    match self.nostr_client.publish_enrollment_response(
-                        &client_id,
-                        &email,
-                        &challenge,
-                    ).await {
-                        Ok(event_id) => {
-                            eprintln!("[enrollment] Gate 1: Published kind 28202: {}", event_id.to_hex());
-                            let mut st = state.lock().unwrap();
-                            st.gate1_complete = true;
-                            drop(st);
-                            on_gate_complete(1, "Published kind 28202 enrollment response");
-                        }
-                        Err(err) => {
-                            eprintln!("[enrollment] Failed to publish 28202: {}", err);
-                        }
-                    }
+                Action::NotifyEnrollmentDetected { client_id } => {
+                    // Notify human that enrollment is available - they must enter challenge manually
+                    // Per Bible: "The human manually enters the challenge code into the agent"
+                    eprintln!("[enrollment] Gate 1: Enrollment detected for {} - awaiting challenge code from human", client_id);
+                    // Include client_id in callback so caller can use it for submit_challenge_code
+                    let callback_data = format!("{{\"client_id\":\"{}\",\"message\":\"Enrollment request detected - enter challenge code\"}}", client_id);
+                    on_gate_complete(1, &callback_data);
                 }
                 Action::CheckEnrollment => {
                     // Check if we can complete enrollment (both events present)
@@ -438,6 +422,36 @@ impl EnrollmentBootstrap {
         }
         
         Ok(())
+    }
+    
+    /// Submit the challenge code entered by the human (Gate 1 completion)
+    /// 
+    /// Per Bible: "The human manually enters the challenge code into the agent"
+    /// This method is called after the human enters the challenge code displayed
+    /// on the enterprise screen.
+    /// 
+    /// # Arguments
+    /// * `client_id` - Enterprise client ID from the pending enrollment
+    /// * `email` - Email address for this enterprise from email mapping
+    /// * `challenge` - Challenge code entered by the human
+    pub async fn submit_challenge_code(
+        &self,
+        client_id: &str,
+        email: &str,
+        challenge: &str,
+    ) -> Result<String> {
+        eprintln!("[enrollment] Submitting challenge code for client_id: {}", client_id);
+        
+        // Publish kind 28202 enrollment response
+        let event_id = self.nostr_client.publish_enrollment_response(
+            client_id,
+            email,
+            challenge,
+        ).await?;
+        
+        eprintln!("[enrollment] Gate 1 complete: Published kind 28202: {}", event_id.to_hex());
+        
+        Ok(event_id.to_hex())
     }
     
     /// Poll for authorization events (kind 28200) tagged with agent npub

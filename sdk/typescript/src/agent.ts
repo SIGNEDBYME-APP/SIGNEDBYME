@@ -86,6 +86,21 @@ export class SignedByAgent {
   }
 
   /**
+   * Submit the challenge code entered by the human (Gate 1 completion).
+   *
+   * Per Bible: "The human manually enters the challenge code into the agent"
+   * Call this after receiving the Gate 1 callback with the challenge code
+   * displayed on the enterprise screen.
+   *
+   * @param clientId - Enterprise client ID from the Gate 1 callback
+   * @param email - Email address for this enterprise (from email mapping)
+   * @param challenge - Challenge code entered by the human
+   */
+  submitChallengeCode(clientId: string, email: string, challenge: string): void {
+    native.submitChallengeCode(this.nativeAgent, clientId, email, challenge);
+  }
+
+  /**
    * Watch for kind 28200 authorization events addressed to this agent.
    *
    * @yields AuthorizationEvent for each incoming authorization request
@@ -110,24 +125,29 @@ export class SignedByAgent {
   }
 
   /**
-   * Start the enrollment watcher (Option A: SDK handles everything).
+   * Start the enrollment watcher.
    *
    * Per Bible Gates 1-3:
-   * 1. Watches for kind 28200 (open session) → auto-responds with kind 28202
+   * 1. Watches for kind 28200 (open session) → notifies human to enter challenge code
    * 2. Watches for kind 28200 (addressed) → waits for human to sign kind 28250
    * 3. Detects kind 28250 → calls /v1/membership/enroll/commit
    *
-   * @param onGateComplete - Optional callback for each gate completion
+   * When Gate 1 callback fires, call submitChallengeCode() with the code from the screen.
+   *
+   * @param onGateComplete - Callback for each gate completion. Gate 1 data includes client_id.
    * @returns Promise that resolves when enrollment completes
    *
    * @example
    * ```typescript
-   * const result = await agent.startEnrollmentWatcher((gate, message) => {
-   *   console.log(`Gate ${gate}: ${message}`);
+   * const result = await agent.startEnrollmentWatcher((gate, data) => {
+   *   console.log(`Gate ${gate}: ${data}`);
+   *   if (gate === 1) {
+   *     // data is JSON: {"client_id":"demo","message":"..."}
+   *     const { client_id } = JSON.parse(data);
+   *     // Human enters challenge code from enterprise screen
+   *     agent.submitChallengeCode(client_id, 'user@email.com', 'XXXX-XXXX-XXXX');
+   *   }
    * });
-   * if (result.success) {
-   *   console.log('Enrolled successfully!');
-   * }
    * ```
    */
   async startEnrollmentWatcher(

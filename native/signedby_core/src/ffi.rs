@@ -54,6 +54,10 @@ struct AgentState {
     nwc_uri: Option<String>,
     /// Email mapping: enterprise client_id → email address
     email_mapping: std::collections::HashMap<String, String>,
+    /// Pending enrollment client_id (set when kind 28200 detected)
+    pending_client_id: Option<String>,
+    /// Pending enrollment email (set when kind 28200 detected)
+    pending_email: Option<String>,
 }
 
 // ============================================================================
@@ -133,6 +137,8 @@ pub extern "C" fn agent_initialize_with_path(storage_path: *const c_char) -> c_i
         storage_path: path.to_string_lossy().to_string(),
         nwc_uri: None,
         email_mapping: std::collections::HashMap::new(),
+        pending_client_id: None,
+        pending_email: None,
     });
     
     FFI_SUCCESS
@@ -400,6 +406,109 @@ pub extern "C" fn agent_start_enrollment_watcher(callback: EnrollmentCallback) -
     });
     
     FFI_SUCCESS
+}
+
+/// Submit the challenge code entered by the human (Gate 1 completion)
+/// 
+/// Per Bible: "The human manually enters the challenge code into the agent"
+/// Call this after receiving the gate=1 callback with the challenge code
+/// displayed on the enterprise screen.
+/// 
+/// # Arguments
+/// * `client_id` - Enterprise client ID from the gate 1 callback
+/// * `email` - Email address for this enterprise
+/// * `challenge` - Challenge code entered by the human
+/// 
+/// Returns: 0 on success, negative error code on failure
+/// 
+/// # Safety
+/// This function is safe to call from C code.
+#[no_mangle]
+pub extern "C" fn agent_submit_challenge_code(
+    client_id: *const c_char,
+    email: *const c_char,
+    challenge: *const c_char,
+) -> c_int {
+    if client_id.is_null() || email.is_null() || challenge.is_null() {
+        return FFI_ERROR_NULL_POINTER;
+    }
+    
+    let client_id_str = match unsafe { CStr::from_ptr(client_id) }.to_str() {
+        Ok(s) => s,
+        Err(_) => return FFI_ERROR_INVALID_UTF8,
+    };
+    
+    let email_str = match unsafe { CStr::from_ptr(email) }.to_str() {
+        Ok(s) => s,
+        Err(_) => return FFI_ERROR_INVALID_UTF8,
+    };
+    
+    let challenge_str = match unsafe { CStr::from_ptr(challenge) }.to_str() {
+        Ok(s) => s,
+        Err(_) => return FFI_ERROR_INVALID_UTF8,
+    };
+    
+    let state = match AGENT_STATE.lock() {
+        Ok(s) => s,
+        Err(_) => return FFI_ERROR_INTERNAL,
+    };
+    
+    if state.is_none() {
+        return FFI_ERROR_NOT_INITIALIZED;
+    }
+    
+    let agent_state = state.as_ref().unwrap();
+    let storage_path = agent_state.storage_path.clone();
+    let email_mapping = agent_state.email_mapping.clone();
+    drop(state);
+    
+    // Run async publishing in the tokio runtime
+    let result = TOKIO_RUNTIME.block_on(async {
+        // Create storage
+        let storage = match EncryptedFileStorage::new(std::path::PathBuf::from(&storage_path)) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("[ffi] Failed to create storage: {}", e);
+                return Err(());
+            }
+        };
+        
+        // Create identity
+        let identity = AgentIdentity::new(storage);
+        
+        // Create NostrClient
+        let nostr_client = match NostrClient::new(&identity).await {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("[ffi] Failed to create NostrClient: {}", e);
+                return Err(());
+            }
+        };
+        
+        // Create EnrollmentBootstrap
+        let enrollment = EnrollmentBootstrap::new(
+            nostr_client,
+            "https://api.signedbyme.com".to_string(),
+            email_mapping,
+        );
+        
+        // Submit the challenge code
+        match enrollment.submit_challenge_code(client_id_str, email_str, challenge_str).await {
+            Ok(event_id) => {
+                eprintln!("[ffi] Gate 1 complete: Published kind 28202: {}", event_id);
+                Ok(())
+            }
+            Err(e) => {
+                eprintln!("[ffi] Failed to submit challenge: {}", e);
+                Err(())
+            }
+        }
+    });
+    
+    match result {
+        Ok(()) => FFI_SUCCESS,
+        Err(()) => FFI_ERROR_ENROLLMENT_FAILED,
+    }
 }
 
 /// Authenticate with an enterprise (generate and submit proof)

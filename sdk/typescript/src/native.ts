@@ -76,6 +76,7 @@ let ffi: {
   agent_enroll: (clientId: string) => number;
   agent_set_email_mapping: (mappingsJson: string) => number;
   agent_start_enrollment_watcher: (callback: any) => number;
+  agent_submit_challenge_code: (clientId: string, email: string, challenge: string) => number;
   agent_authenticate: (clientId: string) => string | null;
   agent_check_delegation: (clientId: string) => number;
   agent_setup_wallet: (nwcUri: string) => number;
@@ -106,6 +107,7 @@ function loadLibrary() {
     agent_enroll: lib.func('int agent_enroll(const char* client_id)'),
     agent_set_email_mapping: lib.func('int agent_set_email_mapping(const char* mappings_json)'),
     agent_start_enrollment_watcher: lib.func('int agent_start_enrollment_watcher(void* callback)'),
+    agent_submit_challenge_code: lib.func('int agent_submit_challenge_code(const char* client_id, const char* email, const char* challenge)'),
     agent_authenticate: lib.func('const char* agent_authenticate(const char* client_id)'),
     agent_check_delegation: lib.func('int agent_check_delegation(const char* client_id)'),
     agent_setup_wallet: lib.func('int agent_setup_wallet(const char* nwc_uri)'),
@@ -272,6 +274,14 @@ const nativeBindings: NativeBindings = {
   async connectRelay(_agent: unknown, _relayUrl: string): Promise<void> {
     // NOSTR relay connection is handled internally by the Rust SDK
     // This is a no-op for now - actual connection happens during auth
+  },
+  
+  submitChallengeCode(_agent: unknown, clientId: string, email: string, challenge: string): void {
+    const lib = loadLibrary();
+    const result = lib.agent_submit_challenge_code(clientId, email, challenge);
+    if (result !== 0) {
+      throw new Error(`Failed to submit challenge code: error code ${result}`);
+    }
   },
   
   subscribeAuthorizations(_agent: unknown): AsyncIterable<string> {
