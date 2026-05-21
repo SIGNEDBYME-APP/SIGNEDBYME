@@ -265,6 +265,7 @@ impl EnrollmentBootstrap {
         // Set up notification handler
         let tx_clone = tx.clone();
         let agent_npub = self.nostr_client.agent_npub().to_string();
+        let agent_hex = self.nostr_client.public_key().to_hex();
         
         // Spawn task to handle notifications
         let nostr_client = self.nostr_client.inner_client();
@@ -273,17 +274,23 @@ impl EnrollmentBootstrap {
                 .handle_notifications(|notification| {
                     let tx = tx_clone.clone();
                     let agent_npub = agent_npub.clone();
+                    let agent_hex = agent_hex.clone();
                     async move {
                         if let nostr_sdk::RelayPoolNotification::Event { event, .. } = notification {
                             let kind = event.kind.as_u16();
                             if kind == super::nostr_client::KIND_ENROLLMENT_AUTH {
                                 let _ = tx.send(EnrollmentEvent::Authorization(*event)).await;
                             } else if kind == super::nostr_client::KIND_HUMAN_DELEGATION {
-                                // Check if delegation is for this agent
+                                // Check if delegation is for this agent (supports both bech32 and hex in p tag)
                                 let is_for_us = event.tags.iter().any(|t| {
                                     let slice = t.as_slice();
-                                    slice.first().map(|s| s.as_str()) == Some("p") &&
-                                    slice.get(1).map(|s| s.contains(&agent_npub.chars().take(20).collect::<String>())).unwrap_or(false)
+                                    if slice.first().map(|s| s.as_str()) != Some("p") {
+                                        return false;
+                                    }
+                                    slice.get(1).map(|p_value| {
+                                        // Match hex pubkey (NOSTR standard) or bech32 npub
+                                        p_value == &agent_hex || p_value.contains(&agent_npub.chars().take(20).collect::<String>())
+                                    }).unwrap_or(false)
                                 });
                                 if is_for_us {
                                     let _ = tx.send(EnrollmentEvent::Delegation(*event)).await;
