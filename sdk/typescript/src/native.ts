@@ -74,6 +74,8 @@ let ffi: {
   agent_get_did: () => string | null;
   agent_get_leaf_commitment: () => string | null;
   agent_enroll: (clientId: string) => number;
+  agent_set_email_mapping: (mappingsJson: string) => number;
+  agent_start_enrollment_watcher: (callback: any) => number;
   agent_authenticate: (clientId: string) => string | null;
   agent_check_delegation: (clientId: string) => number;
   agent_setup_wallet: (nwcUri: string) => number;
@@ -102,6 +104,8 @@ function loadLibrary() {
     agent_get_did: lib.func('const char* agent_get_did()'),
     agent_get_leaf_commitment: lib.func('const char* agent_get_leaf_commitment()'),
     agent_enroll: lib.func('int agent_enroll(const char* client_id)'),
+    agent_set_email_mapping: lib.func('int agent_set_email_mapping(const char* mappings_json)'),
+    agent_start_enrollment_watcher: lib.func('int agent_start_enrollment_watcher(void* callback)'),
     agent_authenticate: lib.func('const char* agent_authenticate(const char* client_id)'),
     agent_check_delegation: lib.func('int agent_check_delegation(const char* client_id)'),
     agent_setup_wallet: lib.func('int agent_setup_wallet(const char* nwc_uri)'),
@@ -256,6 +260,12 @@ const nativeBindings: NativeBindings = {
   },
   
   setEmailMapping(_agent: unknown, mapping: Record<string, string>): void {
+    const lib = loadLibrary();
+    const mappingJson = JSON.stringify(mapping);
+    const result = lib.agent_set_email_mapping(mappingJson);
+    if (result !== 0) {
+      throw new Error(`Failed to set email mapping: error code ${result}`);
+    }
     emailMapping = mapping;
   },
   
@@ -265,14 +275,64 @@ const nativeBindings: NativeBindings = {
   },
   
   subscribeAuthorizations(_agent: unknown): AsyncIterable<string> {
-    // Return an async generator that polls for authorization events
-    // For now, return empty - this would need WebSocket connection
+    const lib = loadLibrary();
+    
+    // Event queue for async iteration
+    const eventQueue: string[] = [];
+    let resolveNext: ((value: IteratorResult<string>) => void) | null = null;
+    let watcherStarted = false;
+    
     return {
       [Symbol.asyncIterator]() {
         return {
-          async next() {
-            // TODO: Implement actual NOSTR subscription via C FFI
-            return { done: true, value: undefined };
+          async next(): Promise<IteratorResult<string>> {
+            // Start the watcher on first iteration
+            if (!watcherStarted) {
+              watcherStarted = true;
+              
+              // Create callback for enrollment events
+              // Note: koffi callback registration happens here
+              // The callback receives (event_type: int, event_json: string)
+              try {
+                const callbackType = koffi.proto('void enrollmentCallback(int, const char*)');
+                const callback = koffi.register((eventType: number, eventJson: string) => {
+                  const event = JSON.stringify({ type: eventType, data: eventJson || '' });
+                  if (resolveNext) {
+                    resolveNext({ done: false, value: event });
+                    resolveNext = null;
+                  } else {
+                    eventQueue.push(event);
+                  }
+                  
+                  // If event_type is 3 (enrollment complete), signal done
+                  if (eventType === 3) {
+                    if (resolveNext) {
+                      resolveNext({ done: true, value: undefined });
+                      resolveNext = null;
+                    }
+                  }
+                }, callbackType);
+                
+                const result = lib.agent_start_enrollment_watcher(callback);
+                if (result !== 0) {
+                  return { done: true, value: undefined };
+                }
+              } catch (e) {
+                // Callback registration failed - return done
+                console.error('[subscribeAuthorizations] Failed to start watcher:', e);
+                return { done: true, value: undefined };
+              }
+            }
+            
+            // Return queued event if available
+            if (eventQueue.length > 0) {
+              return { done: false, value: eventQueue.shift()! };
+            }
+            
+            // Wait for next event
+            return new Promise((resolve) => {
+              resolveNext = resolve;
+            });
           },
         };
       },

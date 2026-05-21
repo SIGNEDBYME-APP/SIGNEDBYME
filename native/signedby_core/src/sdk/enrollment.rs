@@ -16,7 +16,7 @@ use std::time::Duration;
 
 use crate::membership::bn254_leaf_commitment;
 use super::identity::AgentIdentity;
-use super::nostr_client::{NostrClient, KIND_ENROLLMENT_AUTH, KIND_HUMAN_DELEGATION};
+use super::nostr_client::{NostrClient, KIND_ENROLLMENT_AUTH, KIND_HUMAN_DELEGATION, KIND_ENROLLMENT_RESPONSE};
 use super::prover::MerkleWitness;
 use super::storage::SecureStorage;
 
@@ -101,6 +101,21 @@ pub struct DelegationEvent {
     pub created_at: Timestamp,
 }
 
+/// Internal enrollment state machine
+#[derive(Debug, Default)]
+struct EnrollmentState {
+    gate1_complete: bool,
+    authorization_event: Option<Event>,
+    delegation_event: Option<Event>,
+}
+
+/// Enrollment event types for the state machine
+#[derive(Debug)]
+enum EnrollmentEvent {
+    Authorization(Event),
+    Delegation(Event),
+}
+
 /// Enrollment bootstrap - handles NOSTR monitoring and API enrollment
 pub struct EnrollmentBootstrap {
     /// NOSTR client for event polling
@@ -109,11 +124,18 @@ pub struct EnrollmentBootstrap {
     api_client: reqwest::Client,
     /// API base URL
     api_base_url: String,
+    /// Email mapping: enterprise client_id → email address
+    /// Per Bible: "stored locally in the agent's secure storage"
+    email_mapping: std::collections::HashMap<String, String>,
 }
 
 impl EnrollmentBootstrap {
-    /// Create new enrollment bootstrap
-    pub fn new(nostr_client: NostrClient, api_base_url: String) -> Self {
+    /// Create new enrollment bootstrap with email mapping
+    pub fn new(
+        nostr_client: NostrClient,
+        api_base_url: String,
+        email_mapping: std::collections::HashMap<String, String>,
+    ) -> Self {
         let api_client = reqwest::Client::builder()
             .timeout(Duration::from_secs(30))
             .build()
@@ -123,12 +145,19 @@ impl EnrollmentBootstrap {
             nostr_client,
             api_client,
             api_base_url,
+            email_mapping,
         }
     }
     
-    /// Create with default API URL
+    /// Create with default API URL and empty email mapping
     pub fn with_defaults(nostr_client: NostrClient) -> Self {
-        Self::new(nostr_client, DEFAULT_API_URL.to_string())
+        Self::new(nostr_client, DEFAULT_API_URL.to_string(), std::collections::HashMap::new())
+    }
+    
+    /// Set email mapping for enterprises
+    /// Per Bible: "During SDK setup the human tells the agent their email address for each enterprise"
+    pub fn set_email_mapping(&mut self, mapping: std::collections::HashMap<String, String>) {
+        self.email_mapping = mapping;
     }
     
     /// Watch for enrollment events and execute enrollment when both are found
@@ -191,6 +220,186 @@ impl EnrollmentBootstrap {
             leaf_index: None,
             error: Some("Enrollment events not found after max attempts".to_string()),
         })
+    }
+    
+    /// Start the active enrollment watcher (Option A: SDK handles everything)
+    /// 
+    /// Per Bible Gates 1-3:
+    /// 1. Subscribes to kind 28200 (open session) → auto-responds with kind 28202
+    /// 2. Subscribes to kind 28200 (addressed) → waits for human
+    /// 3. Subscribes to kind 28250 (delegation) → calls enroll/commit
+    /// 
+    /// This is subscription-based (not polling) for real-time response.
+    /// 
+    /// # Arguments
+    /// * `identity` - Agent identity for enrollment
+    /// * `on_gate_complete` - Callback for gate completions (gate_num, message)
+    /// * `on_enrollment_complete` - Callback when enrollment finishes
+    pub async fn start_enrollment_watcher<S: SecureStorage>(
+        &mut self,
+        identity: &AgentIdentity<S>,
+        on_gate_complete: impl Fn(u32, &str) + Send + Sync + 'static,
+        on_enrollment_complete: impl FnOnce(EnrollmentResult) + Send + 'static,
+    ) -> Result<()> {
+        use std::sync::{Arc, Mutex};
+        use tokio::sync::mpsc;
+        
+        let (tx, mut rx) = mpsc::channel::<EnrollmentEvent>(32);
+        
+        // State machine for enrollment flow
+        let state = Arc::new(Mutex::new(EnrollmentState::default()));
+        
+        // Clone what we need for the async tasks
+        let email_mapping = self.email_mapping.clone();
+        let on_gate_complete = Arc::new(on_gate_complete);
+        
+        // Subscribe to authorization events (kind 28200)
+        let _auth_sub = self.nostr_client.subscribe_authorization_events().await?;
+        
+        // Subscribe to delegation events (kind 28250)
+        let _deleg_sub = self.nostr_client.subscribe_delegation_events().await?;
+        
+        // Set up notification handler
+        let tx_clone = tx.clone();
+        let agent_npub = self.nostr_client.agent_npub().to_string();
+        
+        // Spawn task to handle notifications
+        let nostr_client = self.nostr_client.inner_client();
+        tokio::spawn(async move {
+            let _ = nostr_client
+                .handle_notifications(|notification| {
+                    let tx = tx_clone.clone();
+                    let agent_npub = agent_npub.clone();
+                    async move {
+                        if let nostr_sdk::RelayPoolNotification::Event { event, .. } = notification {
+                            let kind = event.kind.as_u16();
+                            if kind == super::nostr_client::KIND_ENROLLMENT_AUTH {
+                                let _ = tx.send(EnrollmentEvent::Authorization(*event)).await;
+                            } else if kind == super::nostr_client::KIND_HUMAN_DELEGATION {
+                                // Check if delegation is for this agent
+                                let is_for_us = event.tags.iter().any(|t| {
+                                    let vec = t.as_vec();
+                                    vec.first().map(|s| s.as_str()) == Some("p") &&
+                                    vec.get(1).map(|s| s.contains(&agent_npub.chars().take(20).collect::<String>())).unwrap_or(false)
+                                });
+                                if is_for_us {
+                                    let _ = tx.send(EnrollmentEvent::Delegation(*event)).await;
+                                }
+                            }
+                        }
+                        Ok(false) // Keep listening
+                    }
+                })
+                .await;
+        });
+        
+        // Process events
+        let api_base_url = self.api_base_url.clone();
+        let api_client = self.api_client.clone();
+        let mut on_enrollment_complete = Some(on_enrollment_complete);
+        
+        while let Some(event) = rx.recv().await {
+            let mut st = state.lock().unwrap();
+            
+            match event {
+                EnrollmentEvent::Authorization(e) => {
+                    // Check if this is open session (no p tag) or addressed to us
+                    let is_addressed = e.tags.iter().any(|t| {
+                        t.as_vec().first().map(|s| s.as_str()) == Some("p")
+                    });
+                    
+                    if !is_addressed && !st.gate1_complete {
+                        // Gate 1: Open session - respond with kind 28202
+                        eprintln!("[enrollment] Gate 1: Open session detected");
+                        
+                        // Extract client_id from tags
+                        let client_id = e.tags.iter()
+                            .find(|t| t.as_vec().first().map(|s| s.as_str()) == Some("c"))
+                            .and_then(|t| t.as_vec().get(1).cloned())
+                            .unwrap_or_default();
+                        
+                        // Extract challenge from content
+                        if let Ok(content) = serde_json::from_str::<serde_json::Value>(&e.content) {
+                            if let Some(challenge) = content.get("challenge").and_then(|c| c.as_str()) {
+                                // Look up email for this enterprise
+                                if let Some(email) = email_mapping.get(&client_id) {
+                                    // Publish kind 28202 response
+                                    drop(st); // Release lock before async call
+                                    match self.nostr_client.publish_enrollment_response(
+                                        &client_id,
+                                        email,
+                                        challenge,
+                                    ).await {
+                                        Ok(event_id) => {
+                                            eprintln!("[enrollment] Gate 1: Published kind 28202: {}", event_id.to_hex());
+                                            let mut st = state.lock().unwrap();
+                                            st.gate1_complete = true;
+                                            on_gate_complete(1, "Published kind 28202 enrollment response");
+                                        }
+                                        Err(err) => {
+                                            eprintln!("[enrollment] Failed to publish 28202: {}", err);
+                                        }
+                                    }
+                                    continue;
+                                } else {
+                                    eprintln!("[enrollment] No email mapping for client_id: {}", client_id);
+                                }
+                            }
+                        }
+                    } else if is_addressed {
+                        // Gate 2: Addressed authorization - store it
+                        eprintln!("[enrollment] Gate 2: Addressed authorization received");
+                        st.authorization_event = Some(e);
+                        on_gate_complete(2, "Received addressed authorization from enterprise");
+                    }
+                }
+                EnrollmentEvent::Delegation(e) => {
+                    // Gate 2→3: Human signed delegation
+                    eprintln!("[enrollment] Received delegation from human");
+                    st.delegation_event = Some(e);
+                    on_gate_complete(2, "Received kind 28250 delegation from human");
+                }
+            }
+            
+            // Check if we can complete enrollment (both events present)
+            let st = state.lock().unwrap();
+            if let (Some(auth), Some(deleg)) = (&st.authorization_event, &st.delegation_event) {
+                let auth_id = auth.id.to_hex();
+                let deleg_id = deleg.id.to_hex();
+                drop(st); // Release lock before async call
+                
+                eprintln!("[enrollment] Gate 3: Both events present, calling enroll/commit");
+                on_gate_complete(3, "Calling enrollment API");
+                
+                // Execute enrollment
+                let result = self.execute_enrollment(&auth_id, &deleg_id, identity).await;
+                
+                match result {
+                    Ok(r) => {
+                        eprintln!("[enrollment] Enrollment complete: success={}", r.success);
+                        if let Some(callback) = on_enrollment_complete.take() {
+                            callback(r);
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("[enrollment] Enrollment failed: {}", e);
+                        if let Some(callback) = on_enrollment_complete.take() {
+                            callback(EnrollmentResult {
+                                success: false,
+                                merkle_witness: None,
+                                merkle_root: None,
+                                leaf_index: None,
+                                error: Some(e.to_string()),
+                            });
+                        }
+                    }
+                }
+                
+                break; // Done with enrollment
+            }
+        }
+        
+        Ok(())
     }
     
     /// Poll for authorization events (kind 28200) tagged with agent npub

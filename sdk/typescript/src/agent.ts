@@ -110,6 +110,74 @@ export class SignedByAgent {
   }
 
   /**
+   * Start the enrollment watcher (Option A: SDK handles everything).
+   *
+   * Per Bible Gates 1-3:
+   * 1. Watches for kind 28200 (open session) → auto-responds with kind 28202
+   * 2. Watches for kind 28200 (addressed) → waits for human to sign kind 28250
+   * 3. Detects kind 28250 → calls /v1/membership/enroll/commit
+   *
+   * @param onGateComplete - Optional callback for each gate completion
+   * @returns Promise that resolves when enrollment completes
+   *
+   * @example
+   * ```typescript
+   * const result = await agent.startEnrollmentWatcher((gate, message) => {
+   *   console.log(`Gate ${gate}: ${message}`);
+   * });
+   * if (result.success) {
+   *   console.log('Enrolled successfully!');
+   * }
+   * ```
+   */
+  async startEnrollmentWatcher(
+    onGateComplete?: (gate: number, message: string) => void
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!this.relayConnected) {
+      throw new Error('Not connected to relay. Call connectRelay() first.');
+    }
+
+    if (Object.keys(this._emailMapping).length === 0) {
+      throw new Error('No email mapping set. Call setEmailMapping() first.');
+    }
+
+    return new Promise((resolve) => {
+      const eventIterator = native.subscribeAuthorizations(this.nativeAgent);
+
+      (async () => {
+        for await (const eventJson of eventIterator) {
+          try {
+            const event = JSON.parse(eventJson);
+
+            switch (event.type) {
+              case 1: // Gate 1 responding
+                onGateComplete?.(1, 'Published kind 28202 enrollment response');
+                break;
+              case 2: // Gate 2 received
+                onGateComplete?.(2, 'Received authorization or delegation event');
+                break;
+              case 3: // Enrollment complete
+                onGateComplete?.(3, 'Enrollment complete');
+                try {
+                  const data = event.data ? JSON.parse(event.data) : {};
+                  resolve({ success: data.success ?? true, error: data.error });
+                } catch {
+                  resolve({ success: true });
+                }
+                return;
+            }
+          } catch (e) {
+            // Parse error, continue
+          }
+        }
+
+        // Iterator ended without enrollment complete
+        resolve({ success: false, error: 'Enrollment watcher ended unexpectedly' });
+      })();
+    });
+  }
+
+  /**
    * Get recent agent activity (kinds 28101, 28102, 28103).
    *
    * @param limit - Maximum number of events to return

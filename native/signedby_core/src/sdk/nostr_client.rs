@@ -38,6 +38,7 @@ pub const KIND_DELEGATION_ACK: u16 = 28102;     // Agent acks delegation (28250)
 pub const KIND_REVOCATION_ACK: u16 = 28103;     // Agent acks revocation (28251)
 pub const KIND_HUMAN_DELEGATION: u16 = 28250;   // Human → agent delegation
 pub const KIND_HUMAN_REVOCATION: u16 = 28251;   // Human revokes agent
+pub const KIND_ENROLLMENT_RESPONSE: u16 = 28202; // Agent responds to open enrollment session
 
 /// Proof event data for publishing
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -252,6 +253,39 @@ impl NostrClient {
         Ok(output.val)
     }
     
+    /// Publish enrollment response (kind 28202)
+    /// 
+    /// Agent's response to an open kind 28200 session from enterprise.
+    /// Per Bible Gate 1: Contains email, agent npub, and challenge code.
+    /// 
+    /// # Arguments
+    /// * `client_id` - Enterprise client_id (e.g., "amazon", "acme")
+    /// * `email` - Human's email for this enterprise (from email mapping)
+    /// * `challenge` - Challenge code displayed by enterprise
+    pub async fn publish_enrollment_response(
+        &self,
+        client_id: &str,
+        email: &str,
+        challenge: &str,
+    ) -> Result<EventId> {
+        let tags = vec![
+            Tag::custom(TagKind::Custom("c".into()), vec![client_id.to_string()]),
+        ];
+        
+        let content = serde_json::json!({
+            "email": email,
+            "npub": self.agent_npub,
+            "challenge": challenge,
+        }).to_string();
+        
+        let event_builder = EventBuilder::new(Kind::Custom(KIND_ENROLLMENT_RESPONSE), content, tags);
+        
+        let output = self.client.send_event_builder(event_builder).await
+            .map_err(|e| anyhow!("Failed to publish enrollment response: {}", e))?;
+        
+        Ok(output.val)
+    }
+    
     /// Poll for enrollment authorization events (kind 28200)
     /// 
     /// These are signed by the enterprise and tagged with the agent's npub.
@@ -306,6 +340,68 @@ impl NostrClient {
             .map_err(|e| anyhow!("Failed to fetch revocation events: {}", e))?;
         
         Ok(events)
+    }
+    
+    /// Subscribe to authorization events (kind 28200) in real-time
+    /// 
+    /// Per Bible: "The agent is subscribed to the relay watching for kind 28200 events"
+    /// This is a persistent subscription, not one-shot polling.
+    /// 
+    /// Returns a subscription handle. Events are delivered via the client's notification handler.
+    pub async fn subscribe_authorization_events(&self) -> Result<SubscriptionId> {
+        // Filter for kind 28200 events tagged with this agent's npub
+        let addressed_filter = Filter::new()
+            .kind(Kind::Custom(KIND_ENROLLMENT_AUTH))
+            .custom_tag(SingleLetterTag::lowercase(Alphabet::P), vec![self.agent_npub.clone()]);
+        
+        // Also watch for open enrollment sessions (tagged with client_id only, no p tag)
+        let open_filter = Filter::new()
+            .kind(Kind::Custom(KIND_ENROLLMENT_AUTH));
+        
+        let output = self.client.subscribe(vec![addressed_filter, open_filter], None).await?;
+        
+        Ok(output.val)
+    }
+    
+    /// Subscribe to delegation events (kind 28250) in real-time
+    /// 
+    /// Per Bible Gate 2: "The agent detects kind 28250 on the relay"
+    /// 
+    /// Returns a subscription handle. Events are delivered via the client's notification handler.
+    pub async fn subscribe_delegation_events(&self) -> Result<SubscriptionId> {
+        // Filter for kind 28250 events tagging this agent
+        let filter = Filter::new()
+            .kind(Kind::Custom(KIND_HUMAN_DELEGATION))
+            .custom_tag(SingleLetterTag::lowercase(Alphabet::P), vec![self.agent_npub.clone()]);
+        
+        let output = self.client.subscribe(vec![filter], None).await?;
+        
+        Ok(output.val)
+    }
+    
+    /// Handle relay notifications with a callback
+    /// 
+    /// This processes events from all active subscriptions.
+    /// Call after subscribe_*_events() to receive events.
+    pub async fn handle_notifications<F>(&self, callback: F) -> Result<()>
+    where
+        F: Fn(Event) + Send + Sync + 'static,
+    {
+        let callback = std::sync::Arc::new(callback);
+        
+        self.client
+            .handle_notifications(|notification| {
+                let callback = callback.clone();
+                async move {
+                    if let nostr_sdk::RelayPoolNotification::Event { event, .. } = notification {
+                        callback(*event);
+                    }
+                    Ok(false) // Keep listening
+                }
+            })
+            .await?;
+        
+        Ok(())
     }
     
     /// Disconnect from relay
