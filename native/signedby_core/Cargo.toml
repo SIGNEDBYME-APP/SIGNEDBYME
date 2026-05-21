@@ -1,6 +1,6 @@
 [package]
 name = "signedby-sdk"
-version = "0.1.0-beta.10"
+version = "0.1.0-beta.11"
 edition = "2021"
 description = "SIGNEDBYME SDK - Human-Controlled Identity for Autonomous Agents"
 license = "LicenseRef-SSAL-1.0"

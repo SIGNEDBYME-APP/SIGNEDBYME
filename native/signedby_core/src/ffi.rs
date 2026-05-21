@@ -19,9 +19,17 @@ use std::os::raw::{c_char, c_int};
 use std::sync::Mutex;
 use once_cell::sync::Lazy;
 use serde_json;
+use tokio::runtime::Runtime;
 
 use crate::sdk::identity::{AgentIdentity, AgentIdentityState};
 use crate::sdk::storage::EncryptedFileStorage;
+use crate::sdk::nostr_client::NostrClient;
+use crate::sdk::enrollment::EnrollmentBootstrap;
+
+/// Global tokio runtime for async operations
+static TOKIO_RUNTIME: Lazy<Runtime> = Lazy::new(|| {
+    Runtime::new().expect("Failed to create tokio runtime")
+});
 
 // Error codes
 pub const FFI_SUCCESS: c_int = 0;
@@ -331,18 +339,65 @@ pub extern "C" fn agent_start_enrollment_watcher(callback: EnrollmentCallback) -
         return FFI_ERROR_ENROLLMENT_FAILED;
     }
     
-    // Store callback for later use
-    // Note: Full implementation requires async runtime integration
-    // The callback will be invoked when:
+    // Callback will be invoked when:
     // - event_type=1: Gate 1 - publishing kind 28202 response
     // - event_type=2: Gate 2 - received authorization or delegation
     // - event_type=3: Enrollment complete (event_json contains result)
     
-    let _ = callback; // Silence unused warning for now
+    let email_mapping = agent_state.email_mapping.clone();
+    let storage_path = agent_state.storage_path.clone();
+    drop(state); // Release lock before async work
     
-    // TODO: Spawn tokio runtime and start EnrollmentBootstrap.start_enrollment_watcher()
-    // This will be completed when we integrate the async runtime
-    // For now, return success to indicate the API is available
+    // Spawn enrollment watcher in background
+    TOKIO_RUNTIME.spawn(async move {
+        // Create storage
+        let storage = match EncryptedFileStorage::new(std::path::PathBuf::from(&storage_path)) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("[ffi] Failed to create storage: {}", e);
+                return;
+            }
+        };
+        
+        // Create identity
+        let identity = AgentIdentity::new(storage);
+        
+        // Create NostrClient
+        let nostr_client = match NostrClient::new(&identity).await {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("[ffi] Failed to create NostrClient: {}", e);
+                return;
+            }
+        };
+        
+        // Create EnrollmentBootstrap
+        let mut enrollment = EnrollmentBootstrap::new(
+            nostr_client,
+            "https://api.signedbyme.com".to_string(),
+            email_mapping,
+        );
+        
+        // Start watcher with callbacks
+        let callback_gate = callback;
+        let callback_complete = callback;
+        
+        let _ = enrollment.start_enrollment_watcher(
+            &identity,
+            move |gate, msg| {
+                if let Ok(msg_cstr) = CString::new(msg) {
+                    callback_gate(gate as c_int, msg_cstr.as_ptr());
+                }
+            },
+            move |result| {
+                if let Ok(json) = serde_json::to_string(&result) {
+                    if let Ok(json_cstr) = CString::new(json) {
+                        callback_complete(3, json_cstr.as_ptr());
+                    }
+                }
+            },
+        ).await;
+    });
     
     FFI_SUCCESS
 }
