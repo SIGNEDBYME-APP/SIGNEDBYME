@@ -361,6 +361,9 @@ impl EnrollmentBootstrap {
                 }
             }
             
+            // Drop the mutex guard before any await points (required for Send bound)
+            drop(st);
+            
             // Check if we can complete enrollment (both events present)
             let st = state.lock().unwrap();
             if let (Some(auth), Some(deleg)) = (&st.authorization_event, &st.delegation_event) {
