@@ -369,10 +369,13 @@ impl NostrClient {
     /// 
     /// Returns a subscription handle. Events are delivered via the client's notification handler.
     pub async fn subscribe_delegation_events(&self) -> Result<SubscriptionId> {
-        // Filter for kind 28250 events tagging this agent
+        // Filter for kind 28250 events tagging this agent (supports both bech32 and hex)
         let filter = Filter::new()
             .kind(Kind::Custom(KIND_HUMAN_DELEGATION))
-            .custom_tag(SingleLetterTag::lowercase(Alphabet::P), vec![self.agent_npub.clone()]);
+            .custom_tag(SingleLetterTag::lowercase(Alphabet::P), vec![
+                self.agent_npub.clone(),
+                self.keys.public_key().to_hex(),
+            ]);
         
         let output = self.client.subscribe(vec![filter], None).await?;
         
