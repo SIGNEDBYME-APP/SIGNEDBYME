@@ -520,7 +520,7 @@ impl EnrollmentBootstrap {
     
     /// Execute enrollment with the API
     /// 
-    /// Calls POST /v1/enroll/commit with:
+    /// Calls POST /v1/membership/enroll/commit with:
     /// - leaf_commitment (calculated from leaf_secret)
     /// - authorization_event_id (kind 28200)
     /// - delegation_event_id (kind 28250)
@@ -545,7 +545,7 @@ impl EnrollmentBootstrap {
         };
         
         // Call API
-        let url = format!("{}/v1/enroll/commit", self.api_base_url);
+        let url = format!("{}/v1/membership/enroll/commit", self.api_base_url);
         eprintln!("[enrollment] Calling {}", url);
         
         let response = self.api_client
