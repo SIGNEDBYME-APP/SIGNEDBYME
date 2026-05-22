@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "signedby"
-version = "0.1.0b18"
+version = "0.1.0b19"
 description = "SIGNEDBYME SDK - Human-Controlled Identity for Autonomous Agents"
 readme = "README.md"
 license = { text = "SSAL-1.0" }

@@ -44,15 +44,15 @@ pub struct EnrollmentResult {
     pub error: Option<String>,
 }
 
-/// Enrollment commit request body
+/// Enrollment commit request body (per Bible Section 6.1)
 #[derive(Debug, Serialize)]
 struct EnrollCommitRequest {
     /// Leaf commitment calculated from agent's leaf_secret
     leaf_commitment: String,
-    /// Event ID of kind 28200 (enterprise authorization)
-    authorization_event_id: String,
-    /// Event ID of kind 28250 (human delegation)
-    delegation_event_id: String,
+    /// Full kind 28200 event (enterprise authorization)
+    authorization_event: serde_json::Value,
+    /// Full kind 28250 event (human delegation)
+    delegation_event: serde_json::Value,
 }
 
 /// Enrollment commit response from API
@@ -203,12 +203,9 @@ impl EnrollmentBootstrap {
                     }
                 }
                 
-                // Execute enrollment
-                return self.execute_enrollment(
-                    &auth.event_id.to_hex(),
-                    &delegation.event_id.to_hex(),
-                    identity,
-                ).await;
+                // TODO: Polling path needs to return full Event objects to match API
+                // For now, this path is not used - demo uses watcher path
+                return Err(anyhow!("Polling-based enrollment not yet updated to send full events. Use start_enrollment_watcher() instead."));
             }
             
             if attempt < max_attempts {
@@ -384,21 +381,21 @@ impl EnrollmentBootstrap {
                 }
                 Action::CheckEnrollment => {
                     // Check if we can complete enrollment (both events present)
-                    let maybe_ids = {
+                    let maybe_events = {
                         let st = state.lock().unwrap();
                         if let (Some(auth), Some(deleg)) = (&st.authorization_event, &st.delegation_event) {
-                            Some((auth.id.to_hex(), deleg.id.to_hex()))
+                            Some((auth.clone(), deleg.clone()))
                         } else {
                             None
                         }
                     }; // st out of scope
                     
-                    if let Some((auth_id, deleg_id)) = maybe_ids {
+                    if let Some((auth_event, deleg_event)) = maybe_events {
                         eprintln!("[enrollment] Gate 3: Both events present, calling enroll/commit");
                         on_gate_complete(3, "Calling enrollment API");
                         
-                        // Execute enrollment
-                        let result = self.execute_enrollment(&auth_id, &deleg_id, identity).await;
+                        // Execute enrollment with full events (per Bible Section 6.1)
+                        let result = self.execute_enrollment(&auth_event, &deleg_event, identity).await;
                         
                         match result {
                             Ok(r) => {
@@ -522,12 +519,12 @@ impl EnrollmentBootstrap {
     /// 
     /// Calls POST /v1/membership/enroll/commit with:
     /// - leaf_commitment (calculated from leaf_secret)
-    /// - authorization_event_id (kind 28200)
-    /// - delegation_event_id (kind 28250)
+    /// - authorization_event (full kind 28200 event)
+    /// - delegation_event (full kind 28250 event)
     pub async fn execute_enrollment<S: SecureStorage>(
         &self,
-        authorization_event_id: &str,
-        delegation_event_id: &str,
+        authorization_event: &Event,
+        delegation_event: &Event,
         identity: &AgentIdentity<S>,
     ) -> Result<EnrollmentResult> {
         // Get leaf_secret and calculate leaf_commitment
@@ -537,11 +534,17 @@ impl EnrollmentBootstrap {
         
         eprintln!("[enrollment] Leaf commitment: {}", leaf_commitment_hex);
         
+        // Serialize events to JSON Value (per Bible Section 6.1)
+        let auth_json = serde_json::to_value(authorization_event)
+            .map_err(|e| anyhow!("Failed to serialize authorization event: {}", e))?;
+        let deleg_json = serde_json::to_value(delegation_event)
+            .map_err(|e| anyhow!("Failed to serialize delegation event: {}", e))?;
+        
         // Build request
         let request = EnrollCommitRequest {
             leaf_commitment: leaf_commitment_hex,
-            authorization_event_id: authorization_event_id.to_string(),
-            delegation_event_id: delegation_event_id.to_string(),
+            authorization_event: auth_json,
+            delegation_event: deleg_json,
         };
         
         // Call API
