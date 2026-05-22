@@ -375,11 +375,17 @@ async def _publish_kind_28200_addressed_async(session_id: str, agent_npub: str, 
 
 
 def _publish_kind_28200_addressed(session_id: str, agent_npub: str) -> bool:
-    """Sync wrapper for backwards compatibility."""
-    # Note: This is called from sync context but we need the nonce
-    # For now, return True as placeholder - the async version is preferred
-    logger.info(f"Published kind 28200 addressed for {session_id}, agent: {agent_npub[:16]}...")
-    return True
+    """Sync wrapper - actually publishes the event."""
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        nonce = secrets.token_hex(16)
+        success, _ = loop.run_until_complete(_publish_kind_28200_addressed_async(session_id, agent_npub, nonce))
+        loop.close()
+        return success
+    except Exception as e:
+        logger.error(f"Failed to publish kind 28200 addressed: {e}")
+        return False
 
 
 # =============================================================================
