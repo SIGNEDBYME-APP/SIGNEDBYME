@@ -1,6 +1,6 @@
 {
   "name": "@signedby/sdk",
-  "version": "0.1.0-beta.17",
+  "version": "0.1.0-beta.18",
   "description": "SIGNEDBYME SDK - Human-Controlled Identity for Autonomous Agents",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
