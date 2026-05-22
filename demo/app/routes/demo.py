@@ -49,7 +49,7 @@ def _get_demo_keypair() -> Tuple[bytes, bytes]:
     """Get demo enterprise private key and derive pubkey."""
     if not DEMO_ENTERPRISE_NSEC:
         raise ValueError("DEMO_ENTERPRISE_NSEC not configured")
-    
+
     privkey_bytes = bytes.fromhex(DEMO_ENTERPRISE_NSEC)
     privkey = secp256k1.PrivateKey(privkey_bytes)
     pubkey_bytes = privkey.pubkey.serialize()[1:]  # x-only (32 bytes, skip prefix)
@@ -71,13 +71,13 @@ def _sign_event(event: Dict[str, Any], privkey_bytes: bytes) -> Dict[str, Any]:
     # Compute event ID
     event_id = _compute_event_id(event)
     event["id"] = event_id
-    
+
     # Sign with Schnorr (BIP-340)
     privkey = secp256k1.PrivateKey(privkey_bytes)
     message = bytes.fromhex(event_id)
     sig = privkey.schnorr_sign(message, bip340tag=None, raw=True)
     event["sig"] = sig.hex()
-    
+
     return event
 
 
@@ -88,12 +88,12 @@ async def _publish_to_relay(event: Dict[str, Any], relay_url: str) -> bool:
             # Send EVENT message
             message = json.dumps(["EVENT", event])
             await ws.send(message)
-            
+
             # Wait for OK response (with timeout)
             try:
                 response = await asyncio.wait_for(ws.recv(), timeout=5.0)
                 data = json.loads(response)
-                
+
                 # Handle OK response: ["OK", event_id, success, message]
                 if data[0] == "OK" and len(data) >= 3:
                     if data[2]:  # success
@@ -102,20 +102,20 @@ async def _publish_to_relay(event: Dict[str, Any], relay_url: str) -> bool:
                     else:
                         logger.warning(f"Relay rejected event: {data[3] if len(data) > 3 else 'unknown'}")
                         return False
-                        
+
                 # Handle AUTH challenge (NIP-42) - for now just log it
                 if data[0] == "AUTH":
                     logger.warning(f"Relay requires auth: {relay_url}")
                     return False
-                    
+
             except asyncio.TimeoutError:
                 logger.warning(f"Timeout waiting for relay response from {relay_url}")
                 return False
-                
+
     except Exception as e:
         logger.error(f"Failed to publish to {relay_url}: {e}")
         return False
-    
+
     return False
 
 
@@ -133,7 +133,7 @@ _ip_sessions: Dict[str, list] = {}
 def _cleanup_old_sessions():
     """Remove expired sessions."""
     now = time.time()
-    expired = [sid for sid, s in _sessions.items() 
+    expired = [sid for sid, s in _sessions.items()
                if now - s.get("created_at", 0) > DEMO_SESSION_TIMEOUT]
     for sid in expired:
         del _sessions[sid]
@@ -143,16 +143,16 @@ def _check_rate_limit(ip: str) -> bool:
     """Check if IP is rate limited. Returns True if allowed."""
     now = time.time()
     hour_ago = now - 3600
-    
+
     if ip not in _ip_sessions:
         _ip_sessions[ip] = []
-    
+
     # Remove old timestamps
     _ip_sessions[ip] = [t for t in _ip_sessions[ip] if t > hour_ago]
-    
+
     if len(_ip_sessions[ip]) >= MAX_SESSIONS_PER_IP_PER_HOUR:
         return False
-    
+
     _ip_sessions[ip].append(now)
     return True
 
@@ -259,7 +259,7 @@ def _get_demo_enterprise_npub() -> str:
     """Get demo enterprise npub (hex pubkey) from nsec."""
     if not DEMO_ENTERPRISE_NSEC:
         return ""
-    
+
     try:
         _, pubkey_bytes = _get_demo_keypair()
         return pubkey_bytes.hex()
@@ -271,18 +271,18 @@ def _get_demo_enterprise_npub() -> str:
 async def _publish_kind_28200_open_async(session_id: str, challenge: str) -> Tuple[bool, Optional[Dict]]:
     """
     Publish kind 28200 open session invitation.
-    
+
     Per Bible: No npub yet, tagged with client_id only, 60-second NIP-40 expiry.
     Returns (success, signed_event).
     """
     if not DEMO_ENTERPRISE_NSEC:
         logger.warning("DEMO_ENTERPRISE_NSEC not set, skipping NOSTR publish")
         return False, None
-    
+
     try:
         privkey_bytes, pubkey_bytes = _get_demo_keypair()
         pubkey_hex = pubkey_bytes.hex()
-        
+
         # Build event
         event = {
             "kind": 28200,
@@ -295,16 +295,16 @@ async def _publish_kind_28200_open_async(session_id: str, challenge: str) -> Tup
             ],
             "content": json.dumps({"client_id": DEMO_CLIENT_ID, "type": "open"}),
         }
-        
+
         # Sign event
         signed_event = _sign_event(event, privkey_bytes)
-        
+
         # Publish to relay
         success = await _publish_to_relay(signed_event, NOSTR_RELAY_URL)
-        
+
         logger.info(f"Published kind 28200 open session for {session_id}: {signed_event['id'][:16]}...")
         return success, signed_event
-        
+
     except Exception as e:
         logger.error(f"Failed to publish kind 28200 open: {e}")
         return False, None
@@ -330,18 +330,18 @@ def _publish_kind_28200_open(session_id: str, challenge: str) -> bool:
 async def _publish_kind_28200_addressed_async(session_id: str, agent_npub: str, nonce: str) -> Tuple[bool, Optional[Dict]]:
     """
     Publish kind 28200 addressed authorization.
-    
+
     Per Bible: Tagged with specific agent_npub from Gate 1.
     Returns (success, signed_event).
     """
     if not DEMO_ENTERPRISE_NSEC:
         logger.warning("DEMO_ENTERPRISE_NSEC not set, skipping NOSTR publish")
         return False, None
-    
+
     try:
         privkey_bytes, pubkey_bytes = _get_demo_keypair()
         pubkey_hex = pubkey_bytes.hex()
-        
+
         # Build event
         event = {
             "kind": 28200,
@@ -359,16 +359,16 @@ async def _publish_kind_28200_addressed_async(session_id: str, agent_npub: str, 
                 "type": "addressed",
             }),
         }
-        
+
         # Sign event
         signed_event = _sign_event(event, privkey_bytes)
-        
+
         # Publish to relay
         success = await _publish_to_relay(signed_event, NOSTR_RELAY_URL)
-        
+
         logger.info(f"Published kind 28200 addressed for {session_id}, agent: {agent_npub[:16]}...")
         return success, signed_event
-        
+
     except Exception as e:
         logger.error(f"Failed to publish kind 28200 addressed: {e}")
         return False, None
@@ -390,20 +390,20 @@ def _publish_kind_28200_addressed(session_id: str, agent_npub: str) -> bool:
 def demo_login(body: DemoLoginRequest, request: Request):
     """
     Step 1: Enterprise login simulation.
-    
+
     Accepts any password - this simulates logging into an enterprise like Amazon.
     Stores email in session for Gate 1 validation.
     """
     _cleanup_old_sessions()
-    
+
     # Rate limiting
     client_ip = request.client.host if request.client else "unknown"
     if not _check_rate_limit(client_ip):
         raise HTTPException(429, "Rate limit exceeded. Max 10 demo sessions per hour.")
-    
+
     # Create session
     session_id = "demo_" + secrets.token_urlsafe(16)
-    
+
     _sessions[session_id] = {
         "session_id": session_id,
         "email": body.email,
@@ -415,9 +415,9 @@ def demo_login(body: DemoLoginRequest, request: Request):
         "delegation_id": None,
         "events": [],
     }
-    
+
     logger.info(f"Demo login: {body.email} -> {session_id}")
-    
+
     return DemoLoginResponse(
         session_id=session_id,
         email=body.email,
@@ -428,16 +428,16 @@ def demo_login(body: DemoLoginRequest, request: Request):
 def demo_start(session_id: str):
     """
     Step 2: Start genesis flow.
-    
+
     - Generate challenge code
     - Handle payment (simulated or real based on DEMO_REAL_PAYMENTS)
     - Publish kind 28200 open session
     """
     if session_id not in _sessions:
         raise HTTPException(404, "Session not found")
-    
+
     session = _sessions[session_id]
-    
+
     # Generate challenge
     challenge = _generate_challenge_code()
     session["challenge_code"] = challenge
@@ -447,10 +447,10 @@ def demo_start(session_id: str):
         "type": "open_session",
         "time": datetime.utcnow().isoformat(),
     })
-    
+
     # Publish kind 28200 open session
     published = _publish_kind_28200_open(session_id, challenge)
-    
+
     # Payment handling
     if DEMO_REAL_PAYMENTS:
         # Real payments: agent handles invoice generation
@@ -460,9 +460,9 @@ def demo_start(session_id: str):
         # Simulated: use demo preimage
         preimage = DEMO_PREIMAGE[:16] + "..."  # Truncated for display
         payment_simulated = True
-    
+
     logger.info(f"Demo started: {session_id}, challenge: {challenge}")
-    
+
     return DemoStartResponse(
         session_id=session_id,
         challenge_code=challenge,
@@ -477,28 +477,28 @@ def demo_start(session_id: str):
 def gate1_complete(session_id: str, body: Gate1CompleteRequest):
     """
     Gate 1: Email match + identity binding.
-    
+
     Verifies:
     - Email from agent matches logged-in email
     - Challenge matches displayed code
-    
+
     Then publishes addressed kind 28200 with agent_npub.
     """
     if session_id not in _sessions:
         raise HTTPException(404, "Session not found")
-    
+
     session = _sessions[session_id]
-    
+
     # Verify challenge
     challenge_match = body.challenge == session.get("challenge_code")
     if not challenge_match:
         raise HTTPException(400, f"Challenge mismatch. Expected: {session.get('challenge_code')}")
-    
+
     # Verify email match (THE KEY VALIDATION)
     email_match = body.agent_email.lower() == session.get("email", "").lower()
     if not email_match:
         raise HTTPException(400, f"Email mismatch. Agent claimed: {body.agent_email}, logged in: {session.get('email')}")
-    
+
     # Store agent npub
     session["agent_npub"] = body.agent_npub
     session["current_gate"] = 2
@@ -508,7 +508,7 @@ def gate1_complete(session_id: str, body: Gate1CompleteRequest):
         "agent_npub": body.agent_npub,
         "time": datetime.utcnow().isoformat(),
     })
-    
+
     # Publish addressed kind 28200
     published = _publish_kind_28200_addressed(session_id, body.agent_npub)
     session["events"].append({
@@ -517,9 +517,9 @@ def gate1_complete(session_id: str, body: Gate1CompleteRequest):
         "agent_npub": body.agent_npub,
         "time": datetime.utcnow().isoformat(),
     })
-    
+
     logger.info(f"Gate 1 complete: {session_id}, agent: {body.agent_npub[:16]}...")
-    
+
     return Gate1CompleteResponse(
         status="gate1_complete",
         email_match=True,
@@ -534,7 +534,7 @@ def gate1_complete(session_id: str, body: Gate1CompleteRequest):
 def gate2_complete(session_id: str, body: Gate2CompleteRequest):
     """
     Gate 2: Human's cryptographic consent.
-    
+
     Validates kind 28250 delegation event:
     - Schnorr signature valid
     - Human signature verified via NIP-05 (fail closed)
@@ -543,32 +543,32 @@ def gate2_complete(session_id: str, body: Gate2CompleteRequest):
     """
     if session_id not in _sessions:
         raise HTTPException(404, "Session not found")
-    
+
     session = _sessions[session_id]
     event = body.delegation_event
-    
+
     # Verify event kind
     if event.get("kind") != 28250:
         raise HTTPException(400, f"Invalid event kind: {event.get('kind')}, expected 28250")
-    
+
     # Parse content
     try:
         content = json.loads(event.get("content", "{}"))
     except:
         raise HTTPException(400, "Invalid event content JSON")
-    
+
     # Extract fields
     agent_npub = content.get("agent_npub")
     scopes = content.get("scopes", {})
     expires_at = content.get("expires_at")
     delegation_id = content.get("delegation_id")
     human_npub = event.get("pubkey")
-    
+
     # Verify agent_npub matches Gate 1
     expected_agent = session.get("agent_npub")
     if agent_npub != expected_agent:
         raise HTTPException(400, f"agent_npub mismatch: event has {agent_npub[:16]}..., Gate 1 had {expected_agent[:16]}...")
-    
+
     # Verify expires_at is in future
     if expires_at:
         try:
@@ -578,11 +578,22 @@ def gate2_complete(session_id: str, body: Gate2CompleteRequest):
                 raise HTTPException(400, f"Delegation expired at {expires_at}")
         except ValueError:
             pass  # Can't parse, skip check
-    
+
     # TODO: Verify Schnorr signature
     # TODO: Verify human via NIP-05 (fail closed)
     signature_valid = True  # Placeholder
-    
+
+    # Publish kind 28250 to relay so SDK watcher can detect it
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        published = loop.run_until_complete(_publish_to_relay(event, NOSTR_RELAY_URL))
+        loop.close()
+        logger.info(f"Published kind 28250 for {session_id}: {event.get('id', 'unknown')[:16]}...")
+    except Exception as e:
+        logger.error(f"Failed to publish kind 28250: {e}")
+        published = False
+
     # Update session
     session["human_npub"] = human_npub
     session["delegation_id"] = delegation_id
@@ -595,9 +606,9 @@ def gate2_complete(session_id: str, body: Gate2CompleteRequest):
         "delegation_id": delegation_id,
         "time": datetime.utcnow().isoformat(),
     })
-    
+
     logger.info(f"Gate 2 complete: {session_id}, human: {human_npub[:16]}...")
-    
+
     return Gate2CompleteResponse(
         status="gate2_complete",
         human_npub=human_npub,
@@ -615,9 +626,9 @@ def demo_status(session_id: str):
     """Poll for demo flow progress."""
     if session_id not in _sessions:
         raise HTTPException(404, "Session not found")
-    
+
     session = _sessions[session_id]
-    
+
     return DemoStatusResponse(
         session_id=session_id,
         current_gate=session.get("current_gate", 0),
@@ -635,19 +646,19 @@ def demo_status(session_id: str):
 def demo_verify(session_id: str):
     """
     Complete login verification.
-    
+
     Called after agent publishes kind 28101 proof event.
     Validates delegation and calls internal login verify.
     """
     if session_id not in _sessions:
         raise HTTPException(404, "Session not found")
-    
+
     session = _sessions[session_id]
-    
+
     # Check we're at the right gate
     if session.get("current_gate", 0) < 3:
         raise HTTPException(400, "Flow not complete. Must complete Gates 1-3 first.")
-    
+
     # Mark as complete
     session["current_gate"] = 4
     session["events"].append({
@@ -655,14 +666,14 @@ def demo_verify(session_id: str):
         "type": "proof_event",
         "time": datetime.utcnow().isoformat(),
     })
-    
+
     # TODO: Actually verify via copied login.py
     # For now, return mock success
-    
+
     agent_npub = session.get("agent_npub", "")
-    
+
     logger.info(f"Demo verify complete: {session_id}")
-    
+
     return DemoVerifyResponse(
         status="verified",
         id_token="demo_id_token_placeholder",  # TODO: Generate real JWT
