@@ -304,7 +304,8 @@ const nativeBindings: NativeBindings = {
               // Note: koffi callback registration happens here
               // The callback receives (event_type: int, event_json: string)
               try {
-                const callbackType = koffi.proto('void enrollmentCallback(int, const char*)');
+                const callbackType = koffi.callback('void enrollmentCallback(int, const char*)');
+                const callbackPtrType = koffi.pointer(callbackType);
                 const callback = koffi.register((eventType: number, eventJson: string) => {
                   const event = JSON.stringify({ type: eventType, data: eventJson || '' });
                   if (resolveNext) {
@@ -321,7 +322,7 @@ const nativeBindings: NativeBindings = {
                       resolveNext = null;
                     }
                   }
-                }, callbackType);
+                }, callbackPtrType);
                 
                 const result = lib.agent_start_enrollment_watcher(callback);
                 if (result !== 0) {
