@@ -171,6 +171,10 @@ function goToStep(step) {
         generateUnsignedDelegation();
     }
     
+    if (step === 5) {
+        handleEnrollment();
+    }
+    
     // Log to feed
     addFeedEvent(`Step ${step} started`, 'info');
 }
@@ -422,6 +426,9 @@ async function handleSignedEventSubmit() {
         addFeedEvent('👤 Kind 38250: Human signed delegation', 'delegation');
         addFeedEvent('✓ Gate 2: Human consent verified', 'success');
         
+        // Auto-advance to Gate 3 after 1.5 seconds
+        setTimeout(() => goToStep(5), 1500);
+        
     } catch (err) {
         console.error('Gate 2 error:', err);
         if (waitingEl) waitingEl.style.display = 'none';
@@ -430,6 +437,57 @@ async function handleSignedEventSubmit() {
             errorEl.style.display = 'block';
         }
         addFeedEvent(`❌ Gate 2 failed: ${err.message}`, 'error');
+    }
+}
+
+async function handleEnrollment() {
+    addFeedEvent('🌳 Starting Merkle enrollment...', 'info');
+    
+    try {
+        // Poll for enrollment completion
+        const maxAttempts = 30;  // 30 attempts * 2 seconds = 60 seconds max
+        let attempts = 0;
+        
+        const pollStatus = async () => {
+            attempts++;
+            
+            const response = await fetch(`${DEMO_API_URL}/v1/demo/status/${sessionId}`);
+            if (!response.ok) {
+                throw new Error(`Status check failed: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.completed || data.current_gate >= 4) {
+                // Enrollment complete!
+                addFeedEvent('✓ Merkle tree updated', 'success');
+                addFeedEvent('✓ Gate 3: Enrollment complete', 'success');
+                
+                // Show success UI
+                const successEl = document.getElementById('gate3-success');
+                if (successEl) successEl.style.display = 'block';
+                const waitingEl = document.getElementById('gate3-waiting');
+                if (waitingEl) waitingEl.style.display = 'none';
+                
+                // Auto-advance to proof step after 1.5 seconds
+                setTimeout(() => goToStep(6), 1500);
+                return;
+            }
+            
+            if (attempts < maxAttempts) {
+                // Keep polling
+                setTimeout(pollStatus, 2000);
+            } else {
+                throw new Error('Enrollment timeout - please try again');
+            }
+        };
+        
+        // Start polling
+        await pollStatus();
+        
+    } catch (err) {
+        console.error('Enrollment error:', err);
+        addFeedEvent(`❌ Enrollment failed: ${err.message}`, 'error');
     }
 }
 
