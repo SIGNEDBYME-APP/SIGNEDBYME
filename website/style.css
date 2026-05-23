@@ -1410,15 +1410,16 @@ code {
 
 /* Pricing Section */
 .pricing-split {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    display: flex;
+    justify-content: center;
     gap: var(--space-lg);
     margin-bottom: var(--space-xl);
 }
 
 @media (max-width: 768px) {
     .pricing-split {
-        grid-template-columns: 1fr;
+        flex-direction: column;
+        align-items: center;
     }
 }
 
@@ -1429,6 +1430,8 @@ code {
     padding: var(--space-xl) var(--space-lg);
     text-align: center;
     transition: border-color 0.2s, transform 0.2s;
+    flex: 0 1 280px;
+    max-width: 320px;
 }
 
 .split-item:hover {
@@ -1441,14 +1444,6 @@ code {
 
 .split-item.signedby:hover {
     border-color: var(--primary-light);
-}
-
-.split-item.enterprise {
-    border-color: #3B82F6;
-}
-
-.split-item.enterprise:hover {
-    border-color: #60A5FA;
 }
 
 .split-item.agent {
@@ -1468,10 +1463,6 @@ code {
 
 .split-item.signedby .split-percent {
     color: var(--primary);
-}
-
-.split-item.enterprise .split-percent {
-    color: #3B82F6;
 }
 
 .split-item.agent .split-percent {
