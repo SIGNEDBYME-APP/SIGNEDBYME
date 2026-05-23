@@ -132,17 +132,11 @@ class LoginVerifyError(BaseModel):
     response_model=LoginVerifyResponse,
     responses={
         400: {"model": LoginVerifyError, "description": "Verification failed"},
-        401: {"model": LoginVerifyError, "description": "Invalid API key"},
     }
 )
 def verify_login(
     body: LoginVerifyRequest,
-    authorization: str = Header(..., alias="Authorization")
 ):
-    # Extract Bearer token
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(401, "Authorization header must be: Bearer <token>")
-    api_key = authorization[7:]  # Strip "Bearer "
     """
     Verify login and return OIDC id_token.
     
@@ -156,16 +150,8 @@ def verify_login(
     Pass → id_token returned with sub=npub
     Fail → 400 error
     """
-    # Validate API key
-    client_id, client_config = validate_api_key(api_key)
-    
-    # Verify client_id matches
-    if body.client_id != client_id:
-        raise HTTPException(400, detail={
-            "ok": False,
-            "error": f"client_id mismatch: expected {client_id}",
-            "error_code": "client_id_mismatch"
-        })
+    # client_id from request body
+    client_id = body.client_id
     
     # Validate merkle_root format
     merkle_root = body.public_outputs.merkle_root.lower()

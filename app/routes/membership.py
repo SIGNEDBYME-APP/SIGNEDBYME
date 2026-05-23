@@ -271,7 +271,6 @@ class WitnessResponse(BaseModel):
 @router.post("/enroll/commit", response_model=EnrollResponse)
 async def enroll_commit(
     body: EnrollRequest,
-    authorization: str = Header(..., alias="Authorization")
 ):
     """
     Enroll a user in the membership tree (Bible Section 6.1).
@@ -288,13 +287,6 @@ async def enroll_commit(
     5. Append leaf to tree
     6. Record authorization_event_id
     """
-    # Extract Bearer token
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(401, "Authorization header must be: Bearer <token>")
-    api_key = authorization[7:]
-    
-    # Validate API key
-    client_id, config = validate_api_key(api_key)
     
     # === CHECK 1: Verify enterprise Schnorr signature on kind 28200 via NIP-05 — fail closed ===
     
@@ -318,9 +310,8 @@ async def enroll_commit(
     if not auth:
         raise HTTPException(400, f"Invalid authorization event: {error}")
     
-    # Verify client_id matches API key
-    if auth.client_id != client_id:
-        raise HTTPException(400, f"Event client_id '{auth.client_id}' does not match API key client_id '{client_id}'")
+    # client_id comes from the signed authorization event
+    client_id = auth.client_id
     
     # Check expiration
     if auth.is_expired():

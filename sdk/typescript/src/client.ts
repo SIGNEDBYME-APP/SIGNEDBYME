@@ -10,8 +10,8 @@ import { ScopeDeniedError, DelegationExpiredError } from './errors';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const native = require('./native');
 
-const DEFAULT_RELAY_URL = 'wss://relay.privacy-lion.com';
-const DEFAULT_API_URL = 'https://api.beta.privacy-lion.com';
+const DEFAULT_RELAY_URL = 'wss://relay.signedbyme.com';
+const DEFAULT_API_URL = 'https://api.signedbyme.com';
 
 /**
  * Client for authenticating to enterprises using SIGNEDBYME.
