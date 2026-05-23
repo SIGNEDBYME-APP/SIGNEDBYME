@@ -259,10 +259,24 @@ jobs:
 
   publish-npm:
     name: Publish to npm
-    needs: release
+    needs: [release, build-native]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Download Linux native library
+        uses: actions/download-artifact@v4
+        with:
+          name: signedby-sdk-linux-x64
+          path: native-artifact
+
+      - name: Extract and copy native library
+        run: |
+          cd native-artifact
+          unzip -o signedby-sdk-linux-x64-*.zip
+          cp libsignedby_sdk.so ../sdk/typescript/lib/
+          echo "Copied fresh libsignedby_sdk.so to sdk/typescript/lib/"
+          ls -la ../sdk/typescript/lib/
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
