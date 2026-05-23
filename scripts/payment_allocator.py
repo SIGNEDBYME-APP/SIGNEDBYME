@@ -6,9 +6,8 @@ Runs on 1st of each month via cron. Separate process from API server.
 Reads login_verifications table, calculates revenue share, pays out.
 
 Revenue split:
-- 50% retained by SIGNEDBYME
-- 30% distributed to enterprises (frequency-weighted by logins)
-- 20% distributed to agents (proportional to their share of logins)
+- 85% retained by SIGNEDBYME
+- 15% distributed to agents (proportional to their share of logins)
 
 Payments via Strike Business API (Lightning + USD fiat offramp).
 Minimum payout: 1000 sats (configurable).
@@ -404,42 +403,12 @@ def run_allocation(month: str):
             return
         
         # Step 3: Calculate pools
-        retained = int(total_revenue_sats * 0.50)  # 50% SIGNEDBYME
-        enterprise_pool = int(total_revenue_sats * 0.30)  # 30% enterprises
-        agent_pool = int(total_revenue_sats * 0.20)  # 20% agents
+        retained = int(total_revenue_sats * 0.85)  # 85% SIGNEDBYME
+        agent_pool = int(total_revenue_sats * 0.15)  # 15% agents
         
-        logger.info(f"Pools: retained={retained}, enterprise={enterprise_pool}, agent={agent_pool}")
+        logger.info(f"Pools: retained={retained}, agent={agent_pool}")
         
-        # Step 4: Calculate enterprise payouts (frequency-weighted)
-        enterprise_payouts = []
-        for client_id, login_count in login_counts['by_client'].items():
-            weight = login_count / login_counts['total']
-            amount = int(enterprise_pool * weight)
-            
-            # Add carried forward
-            carried = get_carried_forward(write_conn, client_id)
-            total_amount = amount + carried
-            
-            if total_amount >= MIN_PAYOUT_SATS:
-                enterprise_payouts.append(PayoutRecord(
-                    recipient_type='enterprise',
-                    recipient_id=client_id,
-                    amount_sats=total_amount,
-                    login_count=login_count
-                ))
-                if carried > 0:
-                    clear_carried_forward(write_conn, client_id)
-            elif amount > 0:
-                # Below threshold, carry forward
-                record_payout(write_conn, month, PayoutRecord(
-                    recipient_type='enterprise',
-                    recipient_id=client_id,
-                    amount_sats=amount,
-                    login_count=login_count
-                ), 'carried_forward')
-                logger.info(f"Enterprise {client_id}: {amount} sats carried forward (below {MIN_PAYOUT_SATS} threshold)")
-        
-        # Step 5: Calculate agent payouts
+        # Step 4: Calculate agent payouts
         agent_payouts = []
         for npub, login_count in login_counts['by_npub'].items():
             weight = login_count / login_counts['total']
@@ -468,34 +437,7 @@ def run_allocation(month: str):
                 ), 'carried_forward')
                 logger.info(f"Agent {npub[:16]}...: {amount} sats carried forward (below {MIN_PAYOUT_SATS} threshold)")
         
-        # Step 6: Get Lightning addresses and pay enterprises
-        logger.info(f"Processing {len(enterprise_payouts)} enterprise payouts")
-        for payout in enterprise_payouts:
-            payout.lightning_address = get_enterprise_lightning_address(payout.recipient_id)
-            
-            if not payout.lightning_address:
-                record_payout(write_conn, month, payout, 'failed')
-                logger.warning(f"Enterprise {payout.recipient_id}: no Lightning address found")
-                continue
-            
-            success, status = pay_via_strike(
-                payout.lightning_address,
-                payout.amount_sats,
-                f"SIGNEDBYME revenue share {month}"
-            )
-            
-            if success:
-                record_payout(write_conn, month, payout, 'paid', int(datetime.now(timezone.utc).timestamp()))
-                logger.info(f"Enterprise {payout.recipient_id}: paid {payout.amount_sats} sats")
-            else:
-                failure_count = get_failure_count(write_conn, payout.recipient_id) + 1
-                record_payout(write_conn, month, payout, 'failed')
-                logger.warning(f"Enterprise {payout.recipient_id}: payment failed ({status}), consecutive failures: {failure_count}")
-                
-                if failure_count >= 3:
-                    logger.error(f"ALERT: Enterprise {payout.recipient_id} has 3+ consecutive payment failures - manual review required")
-        
-        # Step 7: Get Lightning addresses and pay agents
+        # Step 5: Get Lightning addresses and pay agents
         logger.info(f"Processing {len(agent_payouts)} agent payouts")
         for payout in agent_payouts:
             payout.lightning_address = get_agent_lightning_address(payout.recipient_id)
