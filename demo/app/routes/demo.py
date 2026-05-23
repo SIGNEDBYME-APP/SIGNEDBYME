@@ -311,17 +311,13 @@ async def _publish_kind_28200_open_async(session_id: str, challenge: str) -> Tup
 
 
 def _publish_kind_28200_open(session_id: str, challenge: str) -> bool:
-    """Sync wrapper for _publish_kind_28200_open_async."""
+    """Sync wrapper - actually publishes the event."""
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # We're inside an async context, create a task
-            future = asyncio.ensure_future(_publish_kind_28200_open_async(session_id, challenge))
-            # For sync compatibility, we'll just return True and let it run
-            return True
-        else:
-            success, _ = loop.run_until_complete(_publish_kind_28200_open_async(session_id, challenge))
-            return success
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        success, _ = loop.run_until_complete(_publish_kind_28200_open_async(session_id, challenge))
+        loop.close()
+        return success
     except Exception as e:
         logger.error(f"Failed to publish kind 28200 open: {e}")
         return False
