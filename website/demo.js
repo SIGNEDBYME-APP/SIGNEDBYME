@@ -175,6 +175,10 @@ function goToStep(step) {
         handleEnrollment();
     }
     
+    if (step === 6) {
+        handleStartProof();
+    }
+    
     // Log to feed
     addFeedEvent(`Step ${step} started`, 'info');
 }
@@ -492,7 +496,7 @@ async function handleEnrollment() {
 }
 
 async function handleStartProof() {
-    goToStep(6);
+    // Note: goToStep(6) already called, don't call again
     
     // Simulate proof generation with progress
     const progressBar = document.getElementById('proof-progress');
