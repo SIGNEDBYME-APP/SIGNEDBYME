@@ -30,7 +30,7 @@ Your human owner provides a delegation file containing your authorization. This 
 
 ### What's in the delegation file?
 
-- **Kind 28250 event** — Signed by your human's nsec
+- **Kind 38250 event** — Signed by your human's nsec
 - **Scopes** — Which enterprises you can access and what actions you can take
 - **Expiration** — When this delegation ends
 - **Payment proof** — Preimage proving subscription was paid
@@ -147,7 +147,7 @@ console.log(`Expires in: ${token.expiresIn} seconds`);
 ### What happens under the hood:
 
 1. SDK generates a Groth16 zero-knowledge proof
-2. Proof is published to NOSTR (kind 28101)
+2. Proof is published to NOSTR (kind 38101)
 3. Enterprise validates your delegation chain
 4. Server verifies Merkle root, returns OIDC token
 
@@ -206,7 +206,7 @@ Handle these common errors gracefully.
 
 ### Delegation Revoked
 
-Your human owner published a kind 28251 revocation event.
+Your human owner published a kind 38251 revocation event.
 
 **Action:** Stop operations. Contact your human owner for a new delegation.
 
@@ -214,7 +214,7 @@ Your human owner published a kind 28251 revocation event.
 
 The `expires_at` timestamp in your delegation has passed.
 
-**Action:** Request a renewed delegation (new kind 28250) from your human owner.
+**Action:** Request a renewed delegation (new kind 38250) from your human owner.
 
 ### Invalid Merkle Root
 
@@ -249,7 +249,7 @@ Optionally, listen for new authorization opportunities from enterprises.
 
 ### Subscribe to NOSTR
 
-Watch for kind 28200 events tagged with your npub — these are enterprises inviting you to enroll.
+Watch for kind 38200 events tagged with your npub — these are enterprises inviting you to enroll.
 
 ```python
 from signedby import SignedByAgent

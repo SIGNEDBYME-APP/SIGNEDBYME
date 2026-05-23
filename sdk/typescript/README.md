@@ -55,7 +55,7 @@ await client.publishProofEvent(proofData);
 - **DID Generation**: secp256k1 keypair in secure storage (OS keyring, Keychain, DPAPI), never extractable
 - **Groth16 ZK Proofs**: BN254 curve, ~101K constraints, <3s on ARM64 via native Rust core (napi-rs)
 - **Bitcoin-Backed**: Identity fused with Lightning payment at creation via NWC (NIP-47)
-- **NOSTR Integration**: Publish kinds 28101 (proof), 28102 (delegation ack), 28103 (revocation ack); poll for kinds 28200/28250/28251; NIP-42 relay authentication; decentralized audit trail on public relays
+- **NOSTR Integration**: Publish kinds 38101 (proof), 38102 (delegation ack), 38103 (revocation ack); poll for kinds 38200/38250/38251; NIP-42 relay authentication; decentralized audit trail on public relays
 - **Witness Caching**: Merkle path cached locally, auto-refresh when root rotates out of 30-root window
 
 ## Modules
@@ -67,7 +67,7 @@ await client.publishProofEvent(proofData);
 | `MembershipProver` | Groth16 proof generation via native Rust |
 | `NostrClient` | NOSTR relay client with NIP-42 auth |
 | `EnrollmentBootstrap` | Three-gate genesis flow |
-| `DelegationValidator` | Delegation validation (kind 28250/28251) |
+| `DelegationValidator` | Delegation validation (kind 38250/38251) |
 | `NwcWallet` | NWC wallet integration (NIP-47) |
 
 ## SDK Lifecycle
@@ -81,13 +81,13 @@ await client.publishProofEvent(proofData);
 
 ### Enrollment per Enterprise
 Three-gate genesis flow — runs once per enterprise:
-- **Gate 1**: Email + token verification via kind 28202
-- **Gate 2**: Human signs kind 28250 delegation
+- **Gate 1**: Email + token verification via kind 38202
+- **Gate 2**: Human signs kind 38250 delegation
 - **Gate 3**: Leaf appended to Merkle tree
 
 ### Authentication
 1. Generate Groth16 proof from leaf_secret + cached witness
-2. Publish kind 28101 to NOSTR
+2. Publish kind 38101 to NOSTR
 3. Enterprise validates and calls API
 4. Agent receives OIDC id_token
 

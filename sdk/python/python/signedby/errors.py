@@ -12,7 +12,7 @@ class DelegationRevokedError(SignedByError):
     """
     Raised when the delegation has been revoked.
     
-    The human owner published a kind 28251 revocation event.
+    The human owner published a kind 38251 revocation event.
     Contact your human owner for a new delegation.
     """
     pass

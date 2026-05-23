@@ -26,7 +26,7 @@ Your agent cannot act without your explicit, signed permission. You create a del
 Permissions flow through a cryptographic chain. Each link is verified independently.
 
 ```
-Human              →      Kind 28250         →      Agent            →      Enterprise
+Human              →      Kind 38250         →      Agent            →      Enterprise
 Signs with nsec          Delegation Event          Receives authority       Verifies & trusts
 ```
 
@@ -34,15 +34,15 @@ Signs with nsec          Delegation Event          Receives authority       Veri
 
 | Who | Keypair | Signs |
 |-----|---------|-------|
-| Human | Your NOSTR keys | 28250 delegation, 28251 revocation |
-| Agent | Derived from leaf_secret | 28101 proof, 28102 auth, 28103 login |
-| Enterprise | Enterprise NOSTR keys | 28200 enrollment authorization |
+| Human | Your NOSTR keys | 38250 delegation, 38251 revocation |
+| Agent | Derived from leaf_secret | 38101 proof, 38102 auth, 38103 login |
+| Enterprise | Enterprise NOSTR keys | 38200 enrollment authorization |
 
 > The server has zero NOSTR keys. It never signs anything. It never sees your delegation. The cryptographic chain is entirely peer-to-peer.
 
 ---
 
-## Kind 28250 — Delegation Grant
+## Kind 38250 — Delegation Grant
 
 This is the NOSTR event you sign to authorize your agent. It specifies exactly what your agent can do.
 
@@ -50,7 +50,7 @@ This is the NOSTR event you sign to authorize your agent. It specifies exactly w
 
 ```json
 {
-  "kind": 28250,
+  "kind": 38250,
   "pubkey": "<your_npub_hex>",
   "tags": [["p", "<agent_npub_hex>"]],
   "content": "{
@@ -95,7 +95,7 @@ Enterprises map these standard scopes to their internal permission systems.
 
 ---
 
-## Kind 28251 — Revocation
+## Kind 38251 — Revocation
 
 Instantly kill your agent's access. One event, immediate effect.
 
@@ -103,7 +103,7 @@ Instantly kill your agent's access. One event, immediate effect.
 
 ```json
 {
-  "kind": 28251,
+  "kind": 38251,
   "pubkey": "<your_npub_hex>",
   "tags": [["d", "del_abc123"]],
   "content": "",
@@ -113,7 +113,7 @@ Instantly kill your agent's access. One event, immediate effect.
 
 ### How Revocation Works
 
-1. You publish kind 28251 with the delegation_id in the #d tag
+1. You publish kind 38251 with the delegation_id in the #d tag
 2. Enterprise catches it on their next NOSTR query
 3. Agent's next login attempt fails before reaching the server
 4. No blocklist. No tree rebuild. No server involvement.
@@ -128,13 +128,13 @@ Before trusting your agent, enterprises verify the complete delegation chain.
 
 ### Validation Flow
 
-1. **Catch agent's proof event** — Agent publishes kind 28101 with proof, public outputs, and delegation_id
-2. **Query for delegation** — Enterprise queries NOSTR: `{"kinds": [28250], "#p": ["<agent_npub_hex>"]}`
+1. **Catch agent's proof event** — Agent publishes kind 38101 with proof, public outputs, and delegation_id
+2. **Query for delegation** — Enterprise queries NOSTR: `{"kinds": [38250], "#p": ["<agent_npub_hex>"]}`
 3. **Verify the delegation:**
    - Signed by trusted human (NIP-05 verified)
    - `expires_at` is in the future
    - `delegation_id` matches the proof event
-   - No kind 28251 revocation exists for this delegation_id
+   - No kind 38251 revocation exists for this delegation_id
 4. **Call /v1/login/verify** — Server confirms Merkle root, returns OIDC token
 
 > **Caching:** Enterprises cache the delegation chain locally (keyed by agent npub). The cache is invalidated at `expires_at` or when a revocation is detected.
@@ -148,7 +148,7 @@ Delegations expire. Subscriptions renew monthly. Your agent's identity persists.
 ### Monthly Renewal
 
 1. Pay monthly Lightning subscription ($21 in BTC)
-2. Publish new kind 28250 with new `expires_at` and new `delegation_id`
+2. Publish new kind 38250 with new `expires_at` and new `delegation_id`
 3. Agent's Merkle leaf stays the same — no re-enrollment needed
 4. Server is completely uninvolved in renewal
 
@@ -170,12 +170,12 @@ The subscription preimage is incorporated into your agent's identity at creation
 
 | Kind | Name | Signed By |
 |------|------|-----------|
-| 28200 | Enrollment Authorization | Enterprise |
-| 28250 | Delegation Grant | Human |
-| 28251 | Revocation | Human |
-| 28101 | Proof Event | Agent |
-| 28102 | Auth Complete | Agent |
-| 28103 | Login Complete | Agent |
+| 38200 | Enrollment Authorization | Enterprise |
+| 38250 | Delegation Grant | Human |
+| 38251 | Revocation | Human |
+| 38101 | Proof Event | Agent |
+| 38102 | Auth Complete | Agent |
+| 38103 | Login Complete | Agent |
 
 ### Key Principles
 

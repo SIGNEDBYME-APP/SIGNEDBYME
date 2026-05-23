@@ -1,12 +1,12 @@
 // sdk/delegation.rs - Delegation Validation (Phase 9A.5)
 //
 // Per Bible Section 4.4 - Enterprise Validation Flow:
-// 1. Query NOSTR for kind 28250 events tagged with agent's npub
+// 1. Query NOSTR for kind 38250 events tagged with agent's npub
 // 2. Verify delegation chain:
 //    (a) Signed by trusted human npub (Schnorr signature via nostr-sdk)
 //    (b) expires_at in future
 //    (c) delegation_id matches
-//    (d) No kind 28251 revocation for this delegation_id
+//    (d) No kind 38251 revocation for this delegation_id
 // 3. Return validation result with scopes and expiration
 
 use anyhow::{Result, anyhow};
@@ -27,7 +27,7 @@ pub struct DelegationValidation {
     pub scopes: Option<serde_json::Value>,
     /// Unique delegation identifier
     pub delegation_id: String,
-    /// Whether this delegation has been revoked via kind 28251
+    /// Whether this delegation has been revoked via kind 38251
     pub revoked: bool,
     /// Human npub who created the delegation
     pub human_npub: Option<String>,
@@ -35,7 +35,7 @@ pub struct DelegationValidation {
     pub error: Option<String>,
 }
 
-/// Parsed kind 28250 delegation content per Bible lines 270-277
+/// Parsed kind 38250 delegation content per Bible lines 270-277
 #[derive(Debug, Clone, Deserialize)]
 struct DelegationContent {
     /// Agent's npub being delegated to
@@ -63,17 +63,17 @@ impl DelegationValidator {
     /// Validate delegation for an agent per Bible Section 4.4
     /// 
     /// Performs the full validation chain:
-    /// 1. Query kind 28250 events tagged with agent_npub
+    /// 1. Query kind 38250 events tagged with agent_npub
     /// 2. Find event with matching delegation_id
     /// 3. Verify Schnorr signature (automatic via nostr-sdk)
     /// 4. Check expires_at is in future
-    /// 5. Check no kind 28251 revocation exists
+    /// 5. Check no kind 38251 revocation exists
     pub async fn validate_delegation(
         &self,
         agent_npub: &str,
         delegation_id: &str,
     ) -> Result<DelegationValidation> {
-        // Step 1: Query kind 28250 events for this agent
+        // Step 1: Query kind 38250 events for this agent
         let delegation_events = self.query_delegation_by_agent(agent_npub).await?;
         
         if delegation_events.is_empty() {
@@ -142,7 +142,7 @@ impl DelegationValidator {
             });
         }
         
-        // Step 5: Check for revocation (kind 28251 with this delegation_id)
+        // Step 5: Check for revocation (kind 38251 with this delegation_id)
         let revoked = self.check_revocation_by_delegation_id(delegation_id).await?;
         
         if revoked {
@@ -237,9 +237,9 @@ impl DelegationValidator {
         })
     }
     
-    /// Query kind 28250 delegation events for a specific agent
+    /// Query kind 38250 delegation events for a specific agent
     /// 
-    /// Filter: {"kinds": [28250], "#p": ["<agent_npub_hex>"]}
+    /// Filter: {"kinds": [38250], "#p": ["<agent_npub_hex>"]}
     async fn query_delegation_by_agent(&self, agent_npub: &str) -> Result<Vec<Event>> {
         // Convert agent_npub to hex if it's bech32
         let agent_pubkey = PublicKey::from_bech32(agent_npub)
@@ -248,7 +248,7 @@ impl DelegationValidator {
         
         let agent_npub_hex = agent_pubkey.to_hex();
         
-        // Build filter per Bible: {"kinds": [28250], "#p": ["<agent_npub_hex>"]}
+        // Build filter per Bible: {"kinds": [38250], "#p": ["<agent_npub_hex>"]}
         let filter = Filter::new()
             .kind(Kind::Custom(KIND_HUMAN_DELEGATION))
             .custom_tag(SingleLetterTag::lowercase(Alphabet::P), vec![agent_npub_hex])
@@ -266,9 +266,9 @@ impl DelegationValidator {
         Ok(events)
     }
     
-    /// Check if a delegation has been revoked via kind 28251
+    /// Check if a delegation has been revoked via kind 38251
     /// 
-    /// Query: {"kinds": [28251], "#d": ["<delegation_id>"]}
+    /// Query: {"kinds": [38251], "#d": ["<delegation_id>"]}
     async fn check_revocation_by_delegation_id(&self, delegation_id: &str) -> Result<bool> {
         // Build filter for revocation events tagged with delegation_id
         let filter = Filter::new()

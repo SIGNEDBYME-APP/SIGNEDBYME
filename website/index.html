@@ -249,7 +249,7 @@
             <div class="agent-flow">
                 <p>
                     <strong>1. Get delegated credentials from your human owner.</strong><br>
-                    Your owner creates a delegation event (NOSTR kind 28250) that authorizes you. 
+                    Your owner creates a delegation event (NOSTR kind 38250) that authorizes you. 
                     This event is signed with their nsec and specifies your permissions. 
                     Store this credential securely. It's your proof of authorization.
                 </p>
@@ -387,7 +387,7 @@ token = await client.login(
                     <span class="code-lang">Integration Flow</span>
                 </div>
 <pre><code>1. Register: Get client_id, configure NIP-05 at your domain
-2. Authorize: Sign kind 28200 NOSTR event for agent enrollment
+2. Authorize: Sign kind 38200 NOSTR event for agent enrollment
 3. Agent enrolls: POST /v1/membership/enroll/commit with signed events
 4. Agent authenticates: POST /v1/login/verify and receive OIDC id_token</code></pre>
             </div>
@@ -588,14 +588,14 @@ token = await client.login(
                             <h3>👤 Gate 2: Human Authorization</h3>
                             <p>Enterprise authorized your agent. Now YOU must grant delegation.</p>
                             
-                            <p class="instruction">1. Copy this unsigned kind 28250 event:</p>
+                            <p class="instruction">1. Copy this unsigned kind 38250 event:</p>
                             <pre id="unsigned-delegation" class="code-block" style="background: #1a1a2e; padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 0.85rem; cursor: pointer;" title="Click to copy"></pre>
                             
                             <p class="instruction" style="margin-top: 1.5rem;">2. Open your terminal and sign it with <code>nak</code>:</p>
-                            <pre class="code-block" style="background: #1a1a2e; padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 0.85rem;">nak event -k 28250 --sec &lt;your_nsec&gt; -c '&lt;content_from_above&gt;' -p &lt;agent_npub_hex&gt; | nak publish wss://relay.signedbyme.com</pre>
+                            <pre class="code-block" style="background: #1a1a2e; padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 0.85rem;">nak event -k 38250 --sec &lt;your_nsec&gt; -c '&lt;content_from_above&gt;' -p &lt;agent_npub_hex&gt; | nak publish wss://relay.signedbyme.com</pre>
                             
                             <p class="instruction" style="margin-top: 1.5rem;">3. Paste the signed event JSON here:</p>
-                            <textarea id="signed-delegation-input" rows="6" style="width: 100%; background: #1a1a2e; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 1rem; font-family: monospace; font-size: 0.85rem;" placeholder='{"kind":28250,"pubkey":"...","sig":"..."}'></textarea>
+                            <textarea id="signed-delegation-input" rows="6" style="width: 100%; background: #1a1a2e; color: #fff; border: 1px solid #333; border-radius: 8px; padding: 1rem; font-family: monospace; font-size: 0.85rem;" placeholder='{"kind":38250,"pubkey":"...","sig":"..."}'></textarea>
                             
                             <button id="btn-submit-delegation" class="btn btn-primary" style="margin-top: 1rem;">Submit Signed Event</button>
                             
@@ -689,7 +689,7 @@ token = await client.login(
                         <!-- Step 8: Revocation -->
                         <div id="step-8" class="step-content">
                             <h3>🚫 Revocation (The Kill Switch)</h3>
-                            <p>You can revoke your agent's access at any time by publishing a kind 28251 event.</p>
+                            <p>You can revoke your agent's access at any time by publishing a kind 38251 event.</p>
                             
                             <div class="revoke-info">
                                 <p><strong>SignedByMe has NO revoke button.</strong></p>
@@ -708,7 +708,7 @@ token = await client.login(
                             <div class="revoke-format">
                                 <h4>Required event format:</h4>
                                 <pre>{
-  "kind": 28251,
+  "kind": 38251,
   "tags": [["d", "<span id="revoke-delegation-id">del_abc123</span>"]],
   "content": "{}",
   "pubkey": "&lt;your_human_npub_hex&gt;"
@@ -734,12 +734,12 @@ token = await client.login(
                             <!-- Events appear here -->
                         </div>
                         <div class="event-legend">
-                            <span class="legend-item"><span class="event-dot auth"></span> 28200</span>
-                            <span class="legend-item"><span class="event-dot response"></span> 28202</span>
-                            <span class="legend-item"><span class="event-dot delegation"></span> 28250</span>
-                            <span class="legend-item"><span class="event-dot proof"></span> 28101</span>
-                            <span class="legend-item"><span class="event-dot complete"></span> 28103</span>
-                            <span class="legend-item"><span class="event-dot revocation"></span> 28251</span>
+                            <span class="legend-item"><span class="event-dot auth"></span> 38200</span>
+                            <span class="legend-item"><span class="event-dot response"></span> 38202</span>
+                            <span class="legend-item"><span class="event-dot delegation"></span> 38250</span>
+                            <span class="legend-item"><span class="event-dot proof"></span> 38101</span>
+                            <span class="legend-item"><span class="event-dot complete"></span> 38103</span>
+                            <span class="legend-item"><span class="event-dot revocation"></span> 38251</span>
                         </div>
                     </div>
                 </div>

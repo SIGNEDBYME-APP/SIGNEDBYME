@@ -1,17 +1,17 @@
 """
 Membership Enrollment API 
 
-NOSTR-native enrollment using kind 28200 + 28250 authorization events.
+NOSTR-native enrollment using kind 38200 + 38250 authorization events.
 
 ENROLLMENT FLOW (Bible Section 6.1):
-1. Enterprise publishes kind 28200 event (enrollment_authorization)
-2. Human publishes kind 28250 event (delegation_grant)
+1. Enterprise publishes kind 38200 event (enrollment_authorization)
+2. Human publishes kind 38250 event (delegation_grant)
 3. App submits leaf_commitment + both events to /v1/membership/enroll/commit
 4. Server verifies both signatures via NIP-05 (fail closed), adds leaf to tree
 5. Server returns witness for proving membership
 
 Storage: SQLite (persistent across restarts)
-Authorization: Kind 28200 + 28250 NOSTR event signatures (both NIP-05 verified)
+Authorization: Kind 38200 + 38250 NOSTR event signatures (both NIP-05 verified)
 """
 
 import os
@@ -225,11 +225,11 @@ class EnrollRequest(BaseModel):
     """enrollment request (Bible Section 6.1)."""
     authorization_event: NostrEventModel = Field(
         ..., 
-        description="Kind 28200 enrollment_authorization event from enterprise"
+        description="Kind 38200 enrollment_authorization event from enterprise"
     )
     delegation_event: NostrEventModel = Field(
         ..., 
-        description="Kind 28250 delegation_grant event from human"
+        description="Kind 38250 delegation_grant event from human"
     )
     leaf_commitment: str = Field(
         ..., 
@@ -277,18 +277,18 @@ async def enroll_commit(
     
     POST /v1/membership/enroll/commit
     
-    Requires BOTH authorization_event (kind 28200) AND delegation_event (kind 28250).
+    Requires BOTH authorization_event (kind 38200) AND delegation_event (kind 38250).
     
     Six checks:
-    1. Verify enterprise Schnorr signature on kind 28200 via NIP-05 — fail closed
-    2. Verify human Schnorr signature on kind 28250 via NIP-05 — fail closed
-    3. Confirm agent_npub in kind 28200 matches agent_npub in kind 28250
+    1. Verify enterprise Schnorr signature on kind 38200 via NIP-05 — fail closed
+    2. Verify human Schnorr signature on kind 38250 via NIP-05 — fail closed
+    3. Confirm agent_npub in kind 38200 matches agent_npub in kind 38250
     4. Check authorization_event_id not already in merkle_leaves (replay prevention)
     5. Append leaf to tree
     6. Record authorization_event_id
     """
     
-    # === CHECK 1: Verify enterprise Schnorr signature on kind 28200 via NIP-05 — fail closed ===
+    # === CHECK 1: Verify enterprise Schnorr signature on kind 38200 via NIP-05 — fail closed ===
     
     # Convert authorization_event model to NostrEvent
     auth_event = NostrEvent(
@@ -317,7 +317,7 @@ async def enroll_commit(
     if auth.is_expired():
         raise HTTPException(400, f"Authorization expired at {auth.expires_at}")
     
-    # Verify Schnorr signature on kind 28200
+    # Verify Schnorr signature on kind 38200
     valid, error = verify_event(auth_event)
     if not valid:
         raise HTTPException(400, f"Enterprise signature verification failed: {error}")
@@ -331,7 +331,7 @@ async def enroll_commit(
     if not nip05_result.valid:
         raise HTTPException(422, f"Enterprise NIP-05 verification failed: {nip05_result.error}")
     
-    # === CHECK 2: Verify human Schnorr signature on kind 28250 via NIP-05 — fail closed ===
+    # === CHECK 2: Verify human Schnorr signature on kind 38250 via NIP-05 — fail closed ===
     
     # Convert delegation_event model to NostrEvent
     deleg_event = NostrEvent(
@@ -344,11 +344,11 @@ async def enroll_commit(
         sig=body.delegation_event.sig,
     )
     
-    # Verify delegation event kind (28250)
-    if deleg_event.kind != 28250:
-        raise HTTPException(400, f"Wrong delegation event kind: {deleg_event.kind}, expected 28250")
+    # Verify delegation event kind (38250)
+    if deleg_event.kind != 38250:
+        raise HTTPException(400, f"Wrong delegation event kind: {deleg_event.kind}, expected 38250")
     
-    # Verify Schnorr signature on kind 28250
+    # Verify Schnorr signature on kind 38250
     valid, error = verify_event(deleg_event)
     if not valid:
         raise HTTPException(400, f"Human signature verification failed: {error}")
@@ -370,7 +370,7 @@ async def enroll_commit(
                 break
     
     if not human_nip05:
-        raise HTTPException(422, "Missing nip05 identifier in delegation event (kind 28250) — required for human NIP-05 verification")
+        raise HTTPException(422, "Missing nip05 identifier in delegation event (kind 38250) — required for human NIP-05 verification")
     
     # Import verify_nip05 for human verification
     from ..lib.nostr import verify_nip05
@@ -378,9 +378,9 @@ async def enroll_commit(
     if not human_nip05_result.valid:
         raise HTTPException(422, f"Human NIP-05 verification failed: {human_nip05_result.error}")
     
-    # === CHECK 3: Confirm agent_npub in kind 28200 matches agent_npub in kind 28250 ===
+    # === CHECK 3: Confirm agent_npub in kind 38200 matches agent_npub in kind 38250 ===
     
-    # Extract agent_npub from authorization event (kind 28200)
+    # Extract agent_npub from authorization event (kind 38200)
     auth_agent_npub = None
     try:
         auth_content = json.loads(auth_event.content)
@@ -394,7 +394,7 @@ async def enroll_commit(
                 auth_agent_npub = tag[1]
                 break
     
-    # Extract agent_npub from delegation event (kind 28250)
+    # Extract agent_npub from delegation event (kind 38250)
     deleg_agent_npub = None
     try:
         deleg_content = json.loads(deleg_event.content)
@@ -408,11 +408,11 @@ async def enroll_commit(
                 break
     
     if not auth_agent_npub:
-        raise HTTPException(400, "Missing agent_npub in authorization event (kind 28200)")
+        raise HTTPException(400, "Missing agent_npub in authorization event (kind 38200)")
     if not deleg_agent_npub:
-        raise HTTPException(400, "Missing agent_npub in delegation event (kind 28250)")
+        raise HTTPException(400, "Missing agent_npub in delegation event (kind 38250)")
     if auth_agent_npub != deleg_agent_npub:
-        raise HTTPException(400, f"agent_npub mismatch: 28200 has {auth_agent_npub[:16]}..., 28250 has {deleg_agent_npub[:16]}...")
+        raise HTTPException(400, f"agent_npub mismatch: 38200 has {auth_agent_npub[:16]}..., 38250 has {deleg_agent_npub[:16]}...")
     
     # Validate commitment format
     try:

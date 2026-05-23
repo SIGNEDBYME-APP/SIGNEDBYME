@@ -329,7 +329,7 @@
 
             <h3>3.2 Generate Your Enterprise NOSTR Keypair</h3>
             <p>
-                Your enterprise needs a NOSTR keypair to sign enrollment authorization events (kind 28200).
+                Your enterprise needs a NOSTR keypair to sign enrollment authorization events (kind 38200).
             </p>
             <div class="doc-code">
 <pre><code>// generate-enterprise-keys.js
@@ -471,9 +471,9 @@ console.log('Public Key (hex):', publicKey);</code></pre>
             <ol>
                 <li>User is logged into your system (you know their email)</li>
                 <li>Your system generates a challenge code and displays it</li>
-                <li>Your system publishes an <strong>open kind 28200</strong> session event to NOSTR (no npub yet, just client_id)</li>
+                <li>Your system publishes an <strong>open kind 38200</strong> session event to NOSTR (no npub yet, just client_id)</li>
                 <li>Agent detects the event, human enters the challenge code in the agent</li>
-                <li>Agent publishes <strong>kind 28202</strong> with email + npub + challenge code</li>
+                <li>Agent publishes <strong>kind 38202</strong> with email + npub + challenge code</li>
                 <li>Your system verifies: email matches logged-in user? challenge matches? signature valid?</li>
                 <li><strong>Gate 1 passed.</strong> You now have the agent's npub.</li>
             </ol>
@@ -481,11 +481,11 @@ console.log('Public Key (hex):', publicKey);</code></pre>
             <h4>Custom Relay Configuration (Optional)</h4>
             <p>
                 By default, agents use SIGNEDBYME's relay infrastructure. If you want agents to publish to your own relays instead, 
-                add a <span class="inline-code">relays</span> tag to your kind 28200 event:
+                add a <span class="inline-code">relays</span> tag to your kind 38200 event:
             </p>
             <div class="doc-code">
 <pre><code>{
-  "kind": 28200,
+  "kind": 38200,
   "tags": [
     ["c", "your-client-id"],
     ["relays", "wss://your-relay.com", "wss://backup-relay.com"]
@@ -502,11 +502,11 @@ console.log('Public Key (hex):', publicKey);</code></pre>
 
             <div class="gate-header">GATE 2 — Human's Cryptographic Consent</div>
             <ol>
-                <li>Your system publishes an <strong>addressed kind 28200</strong> (now tagged with the specific agent_npub)</li>
+                <li>Your system publishes an <strong>addressed kind 38200</strong> (now tagged with the specific agent_npub)</li>
                 <li>Agent receives it, notifies human: "Amazon wants to authorize me"</li>
-                <li>Human signs <strong>kind 28250</strong> (delegation_grant) with their <strong>own NOSTR client</strong> — not the agent</li>
-                <li>Human publishes kind 28250 to relay</li>
-                <li>Your system catches kind 28250, validates signature, checks expires_at</li>
+                <li>Human signs <strong>kind 38250</strong> (delegation_grant) with their <strong>own NOSTR client</strong> — not the agent</li>
+                <li>Human publishes kind 38250 to relay</li>
+                <li>Your system catches kind 38250, validates signature, checks expires_at</li>
                 <li><strong>Gate 2 passed.</strong> Human has cryptographically consented.</li>
             </ol>
             <div class="doc-note">
@@ -521,8 +521,8 @@ console.log('Public Key (hex):', publicKey);</code></pre>
                 <li>Agent calls <span class="inline-code">POST /v1/membership/enroll/commit</span> with:
                     <ul>
                         <li><span class="inline-code">leaf_commitment</span> (hash of agent's secret)</li>
-                        <li><span class="inline-code">authorization_event</span> (kind 28200 from your system)</li>
-                        <li><span class="inline-code">delegation_event</span> (kind 28250 from human)</li>
+                        <li><span class="inline-code">authorization_event</span> (kind 38200 from your system)</li>
+                        <li><span class="inline-code">delegation_event</span> (kind 38250 from human)</li>
                     </ul>
                 </li>
                 <li>SIGNEDBYME server verifies both Schnorr signatures via NIP-05</li>
@@ -580,7 +580,7 @@ async function initAgentAuthorization(userEmail) {
     
     document.getElementById('challenge-code').textContent = challenge;
     
-    // Publish open kind 28200 session
+    // Publish open kind 38200 session
     await publishOpenEnrollmentSession(nonce);
     
     // Subscribe to relay for agent responses
@@ -601,7 +601,7 @@ app.post('/api/signedby/publish-enrollment', async (req, res) => {
     // Load nsec from secrets manager
     const nsec = await getSecret('ENTERPRISE_NOSTR_NSEC');
     
-    // Sign and publish kind 28200
+    // Sign and publish kind 38200
     const signedEvent = await signNostrEvent(eventTemplate, nsec);
     await publishToRelay(signedEvent);
     
@@ -643,12 +643,12 @@ Agent                           NOSTR Relay                    Your System      
   │ 1. Generate ZK proof            │                              │                             │
   │    (<3 seconds)                 │                              │                             │
   │                                 │                              │                             │
-  │ 2. Publish kind 28101 ─────────>│                              │                             │
+  │ 2. Publish kind 38101 ─────────>│                              │                             │
   │    (proof + public_outputs)     │                              │                             │
   │                                 │                              │                             │
-  │                                 │ 3. Catch kind 28101 ────────>│                             │
+  │                                 │ 3. Catch kind 38101 ────────>│                             │
   │                                 │                              │                             │
-  │                                 │<──── 4. Query kind 28250 ────│                             │
+  │                                 │<──── 4. Query kind 38250 ────│                             │
   │                                 │      (validate delegation)   │                             │
   │                                 │                              │                             │
   │                                 │                              │ 5. POST /v1/login/verify ──>│
@@ -674,13 +674,13 @@ const RELAYS = [
 const sub = pool.subscribeMany(
     RELAYS,
     [{
-        kinds: [28101],
+        kinds: [38101],
         '#c': ['your-client-id'],
         since: Math.floor(Date.now() / 1000) - 300
     }],
     {
         onevent(event) {
-            if (event.kind === 28101) {
+            if (event.kind === 38101) {
                 handleLoginProofEvent(event);
             }
         },
@@ -700,9 +700,9 @@ const sub = pool.subscribeMany(
             </p>
             <div class="doc-code">
 <pre><code>async function validateDelegation(agentNpubHex, delegationId) {
-    // Query NOSTR for kind 28250 delegation
+    // Query NOSTR for kind 38250 delegation
     const delegation = await queryNostrEvent({
-        kinds: [28250],
+        kinds: [38250],
         '#p': [agentNpubHex]
     });
     
@@ -713,9 +713,9 @@ const sub = pool.subscribeMany(
     // Check expiry
     if (new Date(content.expires_at) < new Date()) return false;
     
-    // Check for revocation (kind 28251)
+    // Check for revocation (kind 38251)
     const revocation = await queryNostrEvent({
-        kinds: [28251],
+        kinds: [38251],
         '#d': [content.delegation_id]
     });
     
@@ -994,22 +994,22 @@ def validate_signedby_token(id_token, expected_client_id):
         <section id="human-control" class="doc-section">
             <h2>8. Human Control (Delegation & Revocation)</h2>
 
-            <h3>Kind 28250 — Delegation Grant</h3>
+            <h3>Kind 38250 — Delegation Grant</h3>
             <p>Published by human owner, signed with human's nsec:</p>
             <div class="doc-code">
 <pre><code>{
-  "kind": 28250,
+  "kind": 38250,
   "pubkey": "&lt;human_npub_hex&gt;",
   "tags": [["p", "&lt;agent_npub_hex&gt;"]],
   "content": "{\"agent_npub\":\"npub1...\",\"scopes\":{\"amazon\":[\"read\",\"write\"]},\"expires_at\":\"2027-03-01T00:00:00Z\",\"delegation_id\":\"del_abc123\"}"
 }</code></pre>
             </div>
 
-            <h3>Kind 28251 — Revocation</h3>
+            <h3>Kind 38251 — Revocation</h3>
             <p>Published by human owner. <strong>Instant effect.</strong></p>
             <div class="doc-code">
 <pre><code>{
-  "kind": 28251,
+  "kind": 38251,
   "pubkey": "&lt;human_npub_hex&gt;",
   "tags": [["d", "del_abc123"]],
   "content": "{\"revoked_at\":\"2026-04-30T12:00:00Z\"}"
@@ -1017,7 +1017,7 @@ def validate_signedby_token(id_token, expected_client_id):
             </div>
             <div class="doc-warning">
                 <p>
-                    <strong>Your system must check for kind 28251 before accepting any login.</strong> 
+                    <strong>Your system must check for kind 38251 before accepting any login.</strong> 
                     A revoked delegation means the agent is no longer authorized.
                 </p>
             </div>
@@ -1029,7 +1029,7 @@ def validate_signedby_token(id_token, expected_client_id):
             <ul>
                 <li><strong>Never expose your enterprise nsec</strong> — sign events from your backend</li>
                 <li><strong>Never expose your API key</strong> — make API calls from your backend</li>
-                <li><strong>Always validate delegation chain</strong> — check kind 28250 exists, not expired, not revoked</li>
+                <li><strong>Always validate delegation chain</strong> — check kind 38250 exists, not expired, not revoked</li>
                 <li><strong>Verify NIP-05</strong> — confirm human's npub via their domain's nostr.json</li>
                 <li><strong>Use HTTPS only</strong> — never load integration over HTTP</li>
                 <li><strong>Session timeout</strong> — enrollment sessions should expire after 10 minutes max</li>
@@ -1063,7 +1063,7 @@ def validate_signedby_token(id_token, expected_client_id):
                 </tr>
                 <tr>
                     <td>event_replayed</td>
-                    <td>Same kind 28200 used twice</td>
+                    <td>Same kind 38200 used twice</td>
                     <td>Generate new nonce for each enrollment</td>
                 </tr>
                 <tr>
@@ -1074,7 +1074,7 @@ def validate_signedby_token(id_token, expected_client_id):
                 <tr>
                     <td>Agent response not received</td>
                     <td>Agent not subscribed to relay</td>
-                    <td>Verify agent is watching for kind 28200</td>
+                    <td>Verify agent is watching for kind 38200</td>
                 </tr>
             </table>
         </section>

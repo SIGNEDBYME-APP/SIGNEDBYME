@@ -207,7 +207,7 @@ pub async fn subscribe_authorizations(agent: &SignedByAgent) -> Result<Vec<Strin
     let nostr = agent.nostr.lock().await;
     let npub = agent.identity.npub();
     
-    let events = nostr.subscribe_kind_28200(&npub)
+    let events = nostr.subscribe_kind_38200(&npub)
         .await
         .map_err(|e| Error::new(Status::GenericFailure, format!("Subscribe failed: {}", e)))?;
     

@@ -56,7 +56,7 @@ client.publish_proof_event(&proof_data).await?;
 - **DID Generation**: secp256k1 keypair in secure storage (OS keyring, Keychain, DPAPI), never extractable
 - **Groth16 ZK Proofs**: BN254 curve, ~101K constraints, <3s on ARM64 via native C++ FFI
 - **Bitcoin-Backed**: Identity fused with Lightning payment at creation via NWC (NIP-47)
-- **NOSTR Integration**: Publish kinds 28101 (proof), 28102 (delegation ack), 28103 (revocation ack); poll for kinds 28200/28250/28251; NIP-42 relay authentication; decentralized audit trail on public relays
+- **NOSTR Integration**: Publish kinds 38101 (proof), 38102 (delegation ack), 38103 (revocation ack); poll for kinds 38200/38250/38251; NIP-42 relay authentication; decentralized audit trail on public relays
 - **Witness Caching**: Merkle path cached locally, auto-refresh when root rotates out of 30-root window
 
 ## Modules
@@ -68,7 +68,7 @@ client.publish_proof_event(&proof_data).await?;
 | `sdk::prover` | Groth16 proof generation via rapidsnark FFI |
 | `sdk::nostr_client` | NOSTR relay client with NIP-42 auth |
 | `sdk::enrollment` | Three-gate genesis flow |
-| `sdk::delegation` | Delegation validation (kind 28250/28251) |
+| `sdk::delegation` | Delegation validation (kind 38250/38251) |
 | `sdk::wallet` | NWC wallet integration (NIP-47) |
 
 ## Architecture
@@ -87,16 +87,16 @@ client.publish_proof_event(&proof_data).await?;
 │  │             leaves)        which agent               │   │
 │  └─────────────────────────────────────────────────────┘   │
 │                                                             │
-│  Human controls via kind 28250 delegation / 28251 revoke   │
+│  Human controls via kind 38250 delegation / 38251 revoke   │
 └─────────────────────────────────────────────────────────────┘
                               │
-                              │ kind 28101 proof event
+                              │ kind 38101 proof event
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                     Enterprise Server                       │
 │                                                             │
-│  1. Catch kind 28101 from NOSTR                            │
-│  2. Validate delegation (kind 28250)                        │
+│  1. Catch kind 38101 from NOSTR                            │
+│  2. Validate delegation (kind 38250)                        │
 │  3. Call POST /v1/login/verify                              │
 │  4. Receive OIDC id_token (sub = npub)                     │
 └─────────────────────────────────────────────────────────────┘
@@ -113,13 +113,13 @@ client.publish_proof_event(&proof_data).await?;
 
 ### Enrollment per Enterprise
 Three-gate genesis flow — runs once per enterprise:
-- **Gate 1**: Email + token verification via kind 28202
-- **Gate 2**: Human signs kind 28250 delegation
+- **Gate 1**: Email + token verification via kind 38202
+- **Gate 2**: Human signs kind 38250 delegation
 - **Gate 3**: Leaf appended to Merkle tree
 
 ### Authentication
 1. Generate Groth16 proof from leaf_secret + cached witness
-2. Publish kind 28101 to NOSTR
+2. Publish kind 38101 to NOSTR
 3. Enterprise validates and calls API
 4. Agent receives OIDC id_token
 

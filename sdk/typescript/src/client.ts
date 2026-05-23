@@ -38,7 +38,7 @@ export class SignedByClient {
   /**
    * Load a SignedByClient from a delegation file.
    *
-   * @param path - Path to the delegation JSON file (kind 28250 event)
+   * @param path - Path to the delegation JSON file (kind 38250 event)
    * @returns SignedByClient instance ready for authentication
    * @throws {Error} If delegation file doesn't exist or is invalid
    */
@@ -95,7 +95,7 @@ export class SignedByClient {
     // Generate Groth16 proof
     const proofResult = await native.generateLoginProof(this.nativeClient, clientId, nonce);
 
-    // Publish proof event to NOSTR (kind 28101)
+    // Publish proof event to NOSTR (kind 38101)
     await native.publishProofEvent(this.nativeClient, relayUrl, proofResult);
 
     // Call API to verify and get token

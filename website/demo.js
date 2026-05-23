@@ -25,17 +25,17 @@ const RELAYS = [
 ];
 
 // Event kinds
-const EVENT_KINDS = [28101, 28102, 28103, 28200, 28202, 28250, 28251];
+const EVENT_KINDS = [38101, 38102, 38103, 38200, 38202, 38250, 38251];
 
 // Event metadata
 const EVENT_META = {
-    28101: { name: 'Proof', class: 'proof', icon: '🔐' },
-    28102: { name: 'Auth Complete', class: 'complete', icon: '✓' },
-    28103: { name: 'Login Complete', class: 'complete', icon: '✓' },
-    28200: { name: 'Authorization', class: 'auth', icon: '🏢' },
-    28202: { name: 'Response', class: 'response', icon: '🤖' },
-    28250: { name: 'Delegation', class: 'delegation', icon: '👤' },
-    28251: { name: 'Revocation', class: 'revocation', icon: '🚫' },
+    38101: { name: 'Proof', class: 'proof', icon: '🔐' },
+    38102: { name: 'Auth Complete', class: 'complete', icon: '✓' },
+    38103: { name: 'Login Complete', class: 'complete', icon: '✓' },
+    38200: { name: 'Authorization', class: 'auth', icon: '🏢' },
+    38202: { name: 'Response', class: 'response', icon: '🤖' },
+    38250: { name: 'Delegation', class: 'delegation', icon: '👤' },
+    38251: { name: 'Revocation', class: 'revocation', icon: '🚫' },
 };
 
 // =============================================================================
@@ -327,7 +327,7 @@ function generateUnsignedDelegation() {
     
     // Build unsigned event (missing pubkey and sig - human provides these)
     const unsignedEvent = {
-        kind: 28250,
+        kind: 38250,
         created_at: Math.floor(Date.now() / 1000),
         tags: [['p', sessionData.agentNpub || '<agent_npub_hex>']],
         content: JSON.stringify(content),
@@ -374,10 +374,10 @@ async function handleSignedEventSubmit() {
         return;
     }
     
-    // Validate it's kind 28250
-    if (signedEvent.kind !== 28250) {
+    // Validate it's kind 38250
+    if (signedEvent.kind !== 38250) {
         if (errorEl) {
-            errorEl.textContent = `❌ Wrong event kind: ${signedEvent.kind}, expected 28250`;
+            errorEl.textContent = `❌ Wrong event kind: ${signedEvent.kind}, expected 38250`;
             errorEl.style.display = 'block';
         }
         return;
@@ -419,7 +419,7 @@ async function handleSignedEventSubmit() {
         document.getElementById('delegation-expires').textContent = '30 days';
         document.getElementById('gate2-success').style.display = 'block';
         
-        addFeedEvent('👤 Kind 28250: Human signed delegation', 'delegation');
+        addFeedEvent('👤 Kind 38250: Human signed delegation', 'delegation');
         addFeedEvent('✓ Gate 2: Human consent verified', 'success');
         
     } catch (err) {
@@ -461,7 +461,7 @@ async function handleStartProof() {
             document.getElementById('merkle-root').textContent = '0x8b2c...';
             document.getElementById('proof-npub').textContent = truncateNpub(sessionData.agentNpub || 'npub1abc...');
             
-            addFeedEvent('🔐 Kind 28101: Proof published', 'proof');
+            addFeedEvent('🔐 Kind 38101: Proof published', 'proof');
             addFeedEvent('✓ Groth16 proof generated (2,474ms)', 'success');
         }
     }, 50);
@@ -484,8 +484,8 @@ async function handleVerify() {
         
         goToStep(7);
         
-        addFeedEvent('✓ Kind 28102: Auth complete', 'complete');
-        addFeedEvent('✓ Kind 28103: Login complete', 'complete');
+        addFeedEvent('✓ Kind 38102: Auth complete', 'complete');
+        addFeedEvent('✓ Kind 38103: Login complete', 'complete');
         addFeedEvent('🎉 Agent authorized!', 'success');
         
     } catch (err) {
@@ -538,7 +538,7 @@ function displayNostrEvent(event) {
     addFeedEvent(`${meta.icon} ${event.kind}: ${meta.name}`, meta.class);
     
     // Check if this event is for our session (Gate 1 response)
-    if (event.kind === 28202 && currentStep === 3) {
+    if (event.kind === 38202 && currentStep === 3) {
         try {
             const content = JSON.parse(event.content);
             if (content.challenge === sessionData.challengeCode) {

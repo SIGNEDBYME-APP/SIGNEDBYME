@@ -214,27 +214,27 @@ You delegated authority, not ownership. You can monitor, revoke, or renew at any
 
 Subscribe to your agent's npub in any NOSTR client. Watch for these event kinds:
 
-- **28101** — Agent generated a proof
-- **28102** — Authentication complete
-- **28103** — Login complete
+- **38101** — Agent generated a proof
+- **38102** — Authentication complete
+- **38103** — Login complete
 
 ### Revoke a delegation
 
-If your agent is compromised or you want to cut access, publish a kind 28251 event from your NOSTR client:
+If your agent is compromised or you want to cut access, publish a kind 38251 event from your NOSTR client:
 
 ```json
 {
-  "kind": 28251,
+  "kind": 38251,
   "tags": [["d", "DELEGATION_ID_HERE"]],
   "content": ""
 }
 ```
 
-Replace `DELEGATION_ID_HERE` with the `delegation_id` from your original kind 28250. The agent loses access immediately.
+Replace `DELEGATION_ID_HERE` with the `delegation_id` from your original kind 38250. The agent loses access immediately.
 
 ### Renew before expiry
 
-Delegations have an expiration date. Before it expires, sign a new kind 28250 with a new `expires_at`. Your agent's Merkle leaf stays the same — no re-enrollment needed.
+Delegations have an expiration date. Before it expires, sign a new kind 38250 with a new `expires_at`. Your agent's Merkle leaf stays the same — no re-enrollment needed.
 
 ### Pay your subscription
 

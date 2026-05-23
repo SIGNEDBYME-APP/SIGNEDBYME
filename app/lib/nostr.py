@@ -3,7 +3,7 @@ NOSTR Protocol Library for SIGNEDBYME
 
 Handles:
 - NIP-05 identity verification for enterprises
-- Kind 28200 (enrollment_authorization) event verification
+- Kind 38200 (enrollment_authorization) event verification
 - Schnorr signature verification (BIP-340)
 
 Server has ZERO NOSTR keys per Bible Section 13.8.
@@ -40,7 +40,7 @@ SIGNEDBY_RELAYS = [
 NOSTR_RELAY_URL = os.getenv("SIGNEDBYME_RELAY_URL", SIGNEDBY_RELAYS[0])
 
 # Event kinds
-KIND_ENROLLMENT_AUTHORIZATION = 28200
+KIND_ENROLLMENT_AUTHORIZATION = 38200
 
 
 # =============================================================================
@@ -290,12 +290,12 @@ def verify_event(event: NostrEvent) -> Tuple[bool, Optional[str]]:
 
 
 # =============================================================================
-# Kind 28200: Enrollment Authorization
+# Kind 38200: Enrollment Authorization
 # =============================================================================
 
 @dataclass
 class EnrollmentAuthorization:
-    """Parsed enrollment authorization from kind 28200 event."""
+    """Parsed enrollment authorization from kind 38200 event."""
     event: NostrEvent
     client_id: str
     nonce: str
@@ -309,7 +309,7 @@ class EnrollmentAuthorization:
 
 def parse_enrollment_authorization(event: NostrEvent) -> Tuple[Optional[EnrollmentAuthorization], str]:
     """
-    Parse and validate a kind 28200 enrollment authorization event.
+    Parse and validate a kind 38200 enrollment authorization event.
     
     Expected tags:
     - ["client_id", "acme"]
@@ -360,7 +360,7 @@ async def verify_enrollment_authorization(
     client_domain: str,
 ) -> EventVerifyResult:
     """
-    Verify a kind 28200 enrollment authorization event.
+    Verify a kind 38200 enrollment authorization event.
     
     1. Parse and validate event structure
     2. Verify event ID and signature

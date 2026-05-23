@@ -3,7 +3,7 @@ Demo Flow Routes
 
 Per DEMO_ARCHITECTURE.md:
 - POST /v1/demo/login - Accept email + password, create session
-- POST /v1/demo/start/{session_id} - Generate challenge, publish kind 28200
+- POST /v1/demo/start/{session_id} - Generate challenge, publish kind 38200
 - POST /v1/demo/gate1-complete/{session_id} - Verify agent response
 - POST /v1/demo/gate2-complete/{session_id} - Validate human delegation
 - POST /v1/demo/gate3-complete/{session_id} - Merkle enrollment
@@ -181,15 +181,15 @@ class DemoStartResponse(BaseModel):
     challenge_code: str
     demo_preimage: Optional[str] = None
     payment_simulated: bool
-    kind_28200_published: bool
+    kind_38200_published: bool
     message: str
 
 
 class Gate1CompleteRequest(BaseModel):
     """Gate 1 completion request."""
-    agent_email: str = Field(..., description="Email from agent's kind 28202")
-    agent_npub: str = Field(..., description="Agent's npub from kind 28202")
-    challenge: str = Field(..., description="Challenge code from kind 28202")
+    agent_email: str = Field(..., description="Email from agent's kind 38202")
+    agent_npub: str = Field(..., description="Agent's npub from kind 38202")
+    challenge: str = Field(..., description="Challenge code from kind 38202")
 
 
 class Gate1CompleteResponse(BaseModel):
@@ -198,13 +198,13 @@ class Gate1CompleteResponse(BaseModel):
     email_match: bool
     challenge_match: bool
     agent_npub: str
-    kind_28200_addressed_published: bool
+    kind_38200_addressed_published: bool
     message: str
 
 
 class Gate2CompleteRequest(BaseModel):
     """Gate 2 completion request."""
-    delegation_event: Dict[str, Any] = Field(..., description="Kind 28250 event JSON")
+    delegation_event: Dict[str, Any] = Field(..., description="Kind 38250 event JSON")
 
 
 class Gate2CompleteResponse(BaseModel):
@@ -268,9 +268,9 @@ def _get_demo_enterprise_npub() -> str:
         return ""
 
 
-async def _publish_kind_28200_open_async(session_id: str, challenge: str) -> Tuple[bool, Optional[Dict]]:
+async def _publish_kind_38200_open_async(session_id: str, challenge: str) -> Tuple[bool, Optional[Dict]]:
     """
-    Publish kind 28200 open session invitation.
+    Publish kind 38200 open session invitation.
 
     Per Bible: No npub yet, tagged with client_id only, 60-second NIP-40 expiry.
     Returns (success, signed_event).
@@ -285,7 +285,7 @@ async def _publish_kind_28200_open_async(session_id: str, challenge: str) -> Tup
 
         # Build event
         event = {
-            "kind": 28200,
+            "kind": 38200,
             "pubkey": pubkey_hex,
             "created_at": int(time.time()),
             "tags": [
@@ -302,30 +302,30 @@ async def _publish_kind_28200_open_async(session_id: str, challenge: str) -> Tup
         # Publish to relay
         success = await _publish_to_relay(signed_event, NOSTR_RELAY_URL)
 
-        logger.info(f"Published kind 28200 open session for {session_id}: {signed_event['id'][:16]}...")
+        logger.info(f"Published kind 38200 open session for {session_id}: {signed_event['id'][:16]}...")
         return success, signed_event
 
     except Exception as e:
-        logger.error(f"Failed to publish kind 28200 open: {e}")
+        logger.error(f"Failed to publish kind 38200 open: {e}")
         return False, None
 
 
-def _publish_kind_28200_open(session_id: str, challenge: str) -> bool:
+def _publish_kind_38200_open(session_id: str, challenge: str) -> bool:
     """Sync wrapper - actually publishes the event."""
     try:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        success, _ = loop.run_until_complete(_publish_kind_28200_open_async(session_id, challenge))
+        success, _ = loop.run_until_complete(_publish_kind_38200_open_async(session_id, challenge))
         loop.close()
         return success
     except Exception as e:
-        logger.error(f"Failed to publish kind 28200 open: {e}")
+        logger.error(f"Failed to publish kind 38200 open: {e}")
         return False
 
 
-async def _publish_kind_28200_addressed_async(session_id: str, agent_npub: str, nonce: str) -> Tuple[bool, Optional[Dict]]:
+async def _publish_kind_38200_addressed_async(session_id: str, agent_npub: str, nonce: str) -> Tuple[bool, Optional[Dict]]:
     """
-    Publish kind 28200 addressed authorization.
+    Publish kind 38200 addressed authorization.
 
     Per Bible: Tagged with specific agent_npub from Gate 1.
     Returns (success, signed_event).
@@ -340,7 +340,7 @@ async def _publish_kind_28200_addressed_async(session_id: str, agent_npub: str, 
 
         # Build event
         event = {
-            "kind": 28200,
+            "kind": 38200,
             "pubkey": pubkey_hex,
             "created_at": int(time.time()),
             "tags": [
@@ -362,25 +362,25 @@ async def _publish_kind_28200_addressed_async(session_id: str, agent_npub: str, 
         # Publish to relay
         success = await _publish_to_relay(signed_event, NOSTR_RELAY_URL)
 
-        logger.info(f"Published kind 28200 addressed for {session_id}, agent: {agent_npub[:16]}...")
+        logger.info(f"Published kind 38200 addressed for {session_id}, agent: {agent_npub[:16]}...")
         return success, signed_event
 
     except Exception as e:
-        logger.error(f"Failed to publish kind 28200 addressed: {e}")
+        logger.error(f"Failed to publish kind 38200 addressed: {e}")
         return False, None
 
 
-def _publish_kind_28200_addressed(session_id: str, agent_npub: str) -> bool:
+def _publish_kind_38200_addressed(session_id: str, agent_npub: str) -> bool:
     """Sync wrapper - actually publishes the event."""
     try:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         nonce = secrets.token_hex(16)
-        success, _ = loop.run_until_complete(_publish_kind_28200_addressed_async(session_id, agent_npub, nonce))
+        success, _ = loop.run_until_complete(_publish_kind_38200_addressed_async(session_id, agent_npub, nonce))
         loop.close()
         return success
     except Exception as e:
-        logger.error(f"Failed to publish kind 28200 addressed: {e}")
+        logger.error(f"Failed to publish kind 38200 addressed: {e}")
         return False
 
 
@@ -433,7 +433,7 @@ def demo_start(session_id: str):
 
     - Generate challenge code
     - Handle payment (simulated or real based on DEMO_REAL_PAYMENTS)
-    - Publish kind 28200 open session
+    - Publish kind 38200 open session
     """
     if session_id not in _sessions:
         raise HTTPException(404, "Session not found")
@@ -445,13 +445,13 @@ def demo_start(session_id: str):
     session["challenge_code"] = challenge
     session["current_gate"] = 1
     session["events"].append({
-        "kind": 28200,
+        "kind": 38200,
         "type": "open_session",
         "time": datetime.utcnow().isoformat(),
     })
 
-    # Publish kind 28200 open session
-    published = _publish_kind_28200_open(session_id, challenge)
+    # Publish kind 38200 open session
+    published = _publish_kind_38200_open(session_id, challenge)
 
     # Payment handling
     if DEMO_REAL_PAYMENTS:
@@ -470,7 +470,7 @@ def demo_start(session_id: str):
         challenge_code=challenge,
         demo_preimage=preimage,
         payment_simulated=payment_simulated,
-        kind_28200_published=published,
+        kind_38200_published=published,
         message="Genesis flow started. Enter challenge code in your agent.",
     )
 
@@ -484,7 +484,7 @@ def gate1_complete(session_id: str, body: Gate1CompleteRequest):
     - Email from agent matches logged-in email
     - Challenge matches displayed code
 
-    Then publishes addressed kind 28200 with agent_npub.
+    Then publishes addressed kind 38200 with agent_npub.
     """
     if session_id not in _sessions:
         raise HTTPException(404, "Session not found")
@@ -505,16 +505,16 @@ def gate1_complete(session_id: str, body: Gate1CompleteRequest):
     session["agent_npub"] = body.agent_npub
     session["current_gate"] = 2
     session["events"].append({
-        "kind": 28202,
+        "kind": 38202,
         "type": "agent_response",
         "agent_npub": body.agent_npub,
         "time": datetime.utcnow().isoformat(),
     })
 
-    # Publish addressed kind 28200
-    published = _publish_kind_28200_addressed(session_id, body.agent_npub)
+    # Publish addressed kind 38200
+    published = _publish_kind_38200_addressed(session_id, body.agent_npub)
     session["events"].append({
-        "kind": 28200,
+        "kind": 38200,
         "type": "addressed",
         "agent_npub": body.agent_npub,
         "time": datetime.utcnow().isoformat(),
@@ -527,7 +527,7 @@ def gate1_complete(session_id: str, body: Gate1CompleteRequest):
         email_match=True,
         challenge_match=True,
         agent_npub=body.agent_npub,
-        kind_28200_addressed_published=published,
+        kind_38200_addressed_published=published,
         message="Gate 1 passed. Waiting for human to sign delegation (Gate 2).",
     )
 
@@ -537,7 +537,7 @@ def gate2_complete(session_id: str, body: Gate2CompleteRequest):
     """
     Gate 2: Human's cryptographic consent.
 
-    Validates kind 28250 delegation event:
+    Validates kind 38250 delegation event:
     - Schnorr signature valid
     - Human signature verified via NIP-05 (fail closed)
     - agent_npub matches Gate 1
@@ -550,8 +550,8 @@ def gate2_complete(session_id: str, body: Gate2CompleteRequest):
     event = body.delegation_event
 
     # Verify event kind
-    if event.get("kind") != 28250:
-        raise HTTPException(400, f"Invalid event kind: {event.get('kind')}, expected 28250")
+    if event.get("kind") != 38250:
+        raise HTTPException(400, f"Invalid event kind: {event.get('kind')}, expected 38250")
 
     # Parse content
     try:
@@ -585,15 +585,15 @@ def gate2_complete(session_id: str, body: Gate2CompleteRequest):
     # TODO: Verify human via NIP-05 (fail closed)
     signature_valid = True  # Placeholder
 
-    # Publish kind 28250 to relay so SDK watcher can detect it
+    # Publish kind 38250 to relay so SDK watcher can detect it
     try:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         published = loop.run_until_complete(_publish_to_relay(event, NOSTR_RELAY_URL))
         loop.close()
-        logger.info(f"Published kind 28250 for {session_id}: {event.get('id', 'unknown')[:16]}...")
+        logger.info(f"Published kind 38250 for {session_id}: {event.get('id', 'unknown')[:16]}...")
     except Exception as e:
-        logger.error(f"Failed to publish kind 28250: {e}")
+        logger.error(f"Failed to publish kind 38250: {e}")
         published = False
 
     # Update session
@@ -601,7 +601,7 @@ def gate2_complete(session_id: str, body: Gate2CompleteRequest):
     session["delegation_id"] = delegation_id
     session["current_gate"] = 3
     session["events"].append({
-        "kind": 28250,
+        "kind": 38250,
         "type": "delegation",
         "human_npub": human_npub,
         "agent_npub": agent_npub,
@@ -649,7 +649,7 @@ def demo_verify(session_id: str):
     """
     Complete login verification.
 
-    Called after agent publishes kind 28101 proof event.
+    Called after agent publishes kind 38101 proof event.
     Validates delegation and calls internal login verify.
     """
     if session_id not in _sessions:
@@ -664,7 +664,7 @@ def demo_verify(session_id: str):
     # Mark as complete
     session["current_gate"] = 4
     session["events"].append({
-        "kind": 28101,
+        "kind": 38101,
         "type": "proof_event",
         "time": datetime.utcnow().isoformat(),
     })

@@ -11,7 +11,7 @@ Do not open public issues for security vulnerabilities.
 SIGNEDBYME implements a three-gate security model:
 
 ### Gate 1: Enterprise Authorization
-Enterprise signs a NOSTR event (kind 28200) authorizing the agent. Without this signature, enrollment is rejected.
+Enterprise signs a NOSTR event (kind 38200) authorizing the agent. Without this signature, enrollment is rejected.
 
 ### Gate 2: Human Delegation
 Human owner signs a delegation event granting specific permissions to the agent. Agent cannot exceed delegated scope.

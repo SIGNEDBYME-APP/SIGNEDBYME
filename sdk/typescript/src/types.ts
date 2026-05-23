@@ -32,7 +32,7 @@ export interface LoginRequest {
 export type Scopes = Record<string, string[]>;
 
 /**
- * An authorization request from an enterprise (kind 28200).
+ * An authorization request from an enterprise (kind 38200).
  */
 export interface AuthorizationEvent {
   /** Enterprise name/domain */
@@ -48,7 +48,7 @@ export interface AuthorizationEvent {
 }
 
 /**
- * Delegation event content (kind 28250).
+ * Delegation event content (kind 38250).
  */
 export interface DelegationContent {
   agentNpub: string;

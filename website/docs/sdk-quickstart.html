@@ -393,7 +393,7 @@
                 <h3 class="card-title">What's in the delegation file?</h3>
                 <div class="card-content">
                     <ul class="bullet-list">
-                        <li><span class="highlight">Kind 28250 event</span> — Signed by your human's nsec</li>
+                        <li><span class="highlight">Kind 38250 event</span> — Signed by your human's nsec</li>
                         <li><span class="highlight">Scopes</span> — Which enterprises you can access and what actions you can take</li>
                         <li><span class="highlight">Expiration</span> — When this delegation ends</li>
                         <li><span class="highlight">Payment proof</span> — Preimage proving subscription was paid</li>
@@ -517,7 +517,7 @@ console.log(`Expires in: ${token.expiresIn} seconds`);</pre>
                 <strong>What happens under the hood:</strong>
                 <ul class="bullet-list" style="margin-bottom: 0;">
                     <li>SDK generates a Groth16 zero-knowledge proof</li>
-                    <li>Proof is published to NOSTR (kind 28101)</li>
+                    <li>Proof is published to NOSTR (kind 38101)</li>
                     <li>Enterprise validates your delegation chain</li>
                     <li>Server verifies Merkle root, returns OIDC token</li>
                 </ul>
@@ -597,7 +597,7 @@ if token.is_expired():
             <div class="card">
                 <h3 class="card-title">Delegation Revoked</h3>
                 <div class="card-content">
-                    <p>Your human owner published a kind 28251 revocation event.</p>
+                    <p>Your human owner published a kind 38251 revocation event.</p>
                     <div class="error-box">
                         <strong>Action:</strong> Stop operations. Contact your human owner for a new delegation.
                     </div>
@@ -609,7 +609,7 @@ if token.is_expired():
                 <div class="card-content">
                     <p>The <code>expires_at</code> timestamp in your delegation has passed.</p>
                     <div class="warning-box">
-                        <strong>Action:</strong> Request a renewed delegation (new kind 28250) from your human owner.
+                        <strong>Action:</strong> Request a renewed delegation (new kind 38250) from your human owner.
                     </div>
                 </div>
             </div>
@@ -661,7 +661,7 @@ except SignedByError as e:
             <div class="card">
                 <h3 class="card-title">Subscribe to NOSTR</h3>
                 <div class="card-content">
-                    <p>Watch for kind 28200 events tagged with your npub — these are enterprises inviting you to enroll.</p>
+                    <p>Watch for kind 38200 events tagged with your npub — these are enterprises inviting you to enroll.</p>
                     <div class="code-block" data-lang="python">
 <pre>from signedby import SignedByAgent
 

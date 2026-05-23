@@ -2,8 +2,8 @@
 Enrollment API
 
 Three-gate enrollment flow (per Bible Section 6.1):
-1. Gate 1: Email match via kind 28202
-2. Gate 2: Human consent via kind 28250
+1. Gate 1: Email match via kind 38202
+2. Gate 2: Human consent via kind 38250
 3. Gate 3: ZK proof via POST /v1/enroll/commit
 
 Incremental Merkle Tree:
@@ -181,13 +181,13 @@ def verify_schnorr_signature(event: dict) -> bool:
 
 def verify_authorization_event(event: dict, expected_client_id: str) -> tuple[bool, str]:
     """
-    Verify a kind 28200 authorization event.
+    Verify a kind 38200 authorization event.
     
     Returns: (is_valid, error_message)
     """
     # 1. Check event kind
-    if event.get("kind") != 28200:
-        return False, f"Invalid event kind: {event.get('kind')} (expected 28200)"
+    if event.get("kind") != 38200:
+        return False, f"Invalid event kind: {event.get('kind')} (expected 38200)"
     
     # 2. Verify event ID
     if not verify_nostr_event_id(event):
@@ -239,15 +239,15 @@ def extract_client_id_from_event(event: dict) -> Optional[str]:
 
 def verify_delegation_event(event: dict) -> tuple[bool, str]:
     """
-    Verify a kind 28250 delegation event (human signature).
+    Verify a kind 38250 delegation event (human signature).
     
     Per Bible Section 6.1: Verify human Schnorr signature via NIP-05 — fail closed.
     
     Returns: (is_valid, error_message)
     """
     # 1. Check event kind
-    if event.get("kind") != 28250:
-        return False, f"Invalid event kind: {event.get('kind')} (expected 28250)"
+    if event.get("kind") != 38250:
+        return False, f"Invalid event kind: {event.get('kind')} (expected 38250)"
     
     # 2. Verify event ID
     if not verify_nostr_event_id(event):
@@ -276,7 +276,7 @@ def extract_agent_npub_from_event(event: dict) -> Optional[str]:
     """
     Extract agent_npub from event content JSON.
     
-    Both kind 28200 and kind 28250 contain agent_npub in their content field.
+    Both kind 38200 and kind 38250 contain agent_npub in their content field.
     """
     try:
         content = json.loads(event.get("content", "{}"))
@@ -447,22 +447,22 @@ def get_or_create_tree(client_id: str, purpose: str) -> str:
 
 
 class AuthorizationEvent(BaseModel):
-    """Complete kind 28200 NOSTR event (enterprise enrollment authorization)."""
+    """Complete kind 38200 NOSTR event (enterprise enrollment authorization)."""
     id: str = Field(..., description="Event ID (32-byte hex)")
     pubkey: str = Field(..., description="Enterprise pubkey (32-byte hex)")
     created_at: int = Field(..., description="Unix timestamp")
-    kind: int = Field(..., description="Must be 28200")
+    kind: int = Field(..., description="Must be 38200")
     tags: List[List[str]] = Field(..., description="Event tags including agent_npub")
     content: str = Field(..., description="JSON content with agent_npub, expires_at")
     sig: str = Field(..., description="Schnorr signature (64-byte hex)")
 
 
 class DelegationEvent(BaseModel):
-    """Complete kind 28250 NOSTR event (human delegation grant)."""
+    """Complete kind 38250 NOSTR event (human delegation grant)."""
     id: str = Field(..., description="Event ID (32-byte hex)")
     pubkey: str = Field(..., description="Human pubkey (32-byte hex)")
     created_at: int = Field(..., description="Unix timestamp")
-    kind: int = Field(..., description="Must be 28250")
+    kind: int = Field(..., description="Must be 38250")
     tags: List[List[str]] = Field(..., description="Event tags")
     content: str = Field(..., description="JSON content with agent_npub, scopes, expires_at")
     sig: str = Field(..., description="Schnorr signature (64-byte hex)")
@@ -472,12 +472,12 @@ class EnrollCommitRequest(BaseModel):
     """
     Commit enrollment to tree. Per Bible Section 6.1:
     - leaf_commitment: The agent's leaf commitment
-    - authorization_event: Kind 28200 NOSTR event signed by enterprise
-    - delegation_event: Kind 28250 NOSTR event signed by human
+    - authorization_event: Kind 38200 NOSTR event signed by enterprise
+    - delegation_event: Kind 38250 NOSTR event signed by human
     """
     leaf_commitment: str = Field(..., description="Hex-encoded leaf commitment (32 bytes)")
-    authorization_event: AuthorizationEvent = Field(..., description="Kind 28200 NOSTR event")
-    delegation_event: DelegationEvent = Field(..., description="Kind 28250 NOSTR event")
+    authorization_event: AuthorizationEvent = Field(..., description="Kind 38200 NOSTR event")
+    delegation_event: DelegationEvent = Field(..., description="Kind 38250 NOSTR event")
 
 
 class EnrollCommitResponse(BaseModel):
@@ -513,10 +513,10 @@ def enroll_commit(body: EnrollCommitRequest):
     Commit enrollment to Merkle tree.
     
     Per Bible Section 6.1 — ALL SIX CHECKS REQUIRED:
-    1. Accept leaf_commitment, authorization_event (28200), delegation_event (28250)
-    2. Verify enterprise Schnorr signature on kind 28200 via NIP-05 — fail closed
-    3. Verify human Schnorr signature on kind 28250 via NIP-05 — fail closed
-    4. Confirm agent_npub in kind 28200 matches agent_npub in kind 28250
+    1. Accept leaf_commitment, authorization_event (38200), delegation_event (38250)
+    2. Verify enterprise Schnorr signature on kind 38200 via NIP-05 — fail closed
+    3. Verify human Schnorr signature on kind 38250 via NIP-05 — fail closed
+    4. Confirm agent_npub in kind 38200 matches agent_npub in kind 38250
     5. Check authorization_event_id not already in merkle_leaves (replay prevention)
     6. Append leaf to tree and record authorization_event_id
     """
@@ -525,36 +525,36 @@ def enroll_commit(body: EnrollCommitRequest):
     deleg_event = body.delegation_event.model_dump()
     
     # === CHECK 1: Validate event kinds ===
-    if auth_event.get("kind") != 28200:
-        raise HTTPException(400, f"authorization_event must be kind 28200, got {auth_event.get('kind')}")
-    if deleg_event.get("kind") != 28250:
-        raise HTTPException(400, f"delegation_event must be kind 28250, got {deleg_event.get('kind')}")
+    if auth_event.get("kind") != 38200:
+        raise HTTPException(400, f"authorization_event must be kind 38200, got {auth_event.get('kind')}")
+    if deleg_event.get("kind") != 38250:
+        raise HTTPException(400, f"delegation_event must be kind 38250, got {deleg_event.get('kind')}")
     
     # === Extract client_id from authorization event ===
     client_id = extract_client_id_from_event(auth_event)
     if not client_id:
         raise HTTPException(400, "Missing client_id (tag 'c') in authorization event")
     
-    # === CHECK 2: Verify enterprise Schnorr signature on kind 28200 via NIP-05 ===
+    # === CHECK 2: Verify enterprise Schnorr signature on kind 38200 via NIP-05 ===
     is_valid, error_msg = verify_authorization_event(auth_event, client_id)
     if not is_valid:
         raise HTTPException(401, f"Enterprise signature verification failed: {error_msg}")
     
-    # === CHECK 3: Verify human Schnorr signature on kind 28250 via NIP-05 ===
+    # === CHECK 3: Verify human Schnorr signature on kind 38250 via NIP-05 ===
     is_valid, error_msg = verify_delegation_event(deleg_event)
     if not is_valid:
         raise HTTPException(401, f"Human signature verification failed: {error_msg}")
     
-    # === CHECK 4: Confirm agent_npub in 28200 matches agent_npub in 28250 ===
+    # === CHECK 4: Confirm agent_npub in 38200 matches agent_npub in 38250 ===
     auth_agent_npub = extract_agent_npub_from_event(auth_event)
     deleg_agent_npub = extract_agent_npub_from_event(deleg_event)
     
     if not auth_agent_npub:
-        raise HTTPException(400, "Missing agent_npub in authorization event (kind 28200)")
+        raise HTTPException(400, "Missing agent_npub in authorization event (kind 38200)")
     if not deleg_agent_npub:
-        raise HTTPException(400, "Missing agent_npub in delegation event (kind 28250)")
+        raise HTTPException(400, "Missing agent_npub in delegation event (kind 38250)")
     if auth_agent_npub != deleg_agent_npub:
-        raise HTTPException(400, f"npub_mismatch: agent_npub in kind 28200 ({auth_agent_npub[:16]}...) does not match kind 28250 ({deleg_agent_npub[:16]}...)")
+        raise HTTPException(400, f"npub_mismatch: agent_npub in kind 38200 ({auth_agent_npub[:16]}...) does not match kind 38250 ({deleg_agent_npub[:16]}...)")
     
     # === CHECK 5: Check authorization_event_id not already in merkle_leaves ===
     if authorization_event_id_exists(auth_event["id"]):

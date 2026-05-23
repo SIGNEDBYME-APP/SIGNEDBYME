@@ -78,7 +78,7 @@ Contact SignedByMe to register. You'll receive:
 
 ### 3.2 Generate Your Enterprise NOSTR Keypair
 
-Your enterprise needs a NOSTR keypair to sign enrollment authorization events (kind 28200).
+Your enterprise needs a NOSTR keypair to sign enrollment authorization events (kind 38200).
 
 ```javascript
 // generate-enterprise-keys.js
@@ -206,19 +206,19 @@ When a user clicks "Authorize your Agent", the genesis flow runs. This is a one-
 
 1. User is logged into your system (you know their email)
 2. Your system generates a challenge code and displays it
-3. Your system publishes an open kind 28200 session event to NOSTR (no npub yet, just client_id)
+3. Your system publishes an open kind 38200 session event to NOSTR (no npub yet, just client_id)
 4. Agent detects the event, human enters the challenge code in the agent
-5. Agent publishes kind 28202 with email + npub + challenge code
+5. Agent publishes kind 38202 with email + npub + challenge code
 6. Your system verifies: email matches logged-in user? challenge matches? signature valid?
 7. Gate 1 passed. You now have the agent's npub.
 
 ##### Custom Relay Configuration (Optional)
 
-By default, agents use SignedByMe's relay infrastructure. If you want agents to publish to your own relays instead, add a relays tag to your kind 28200 event:
+By default, agents use SignedByMe's relay infrastructure. If you want agents to publish to your own relays instead, add a relays tag to your kind 38200 event:
 
 ```json
 {
-  "kind": 28200,
+  "kind": 38200,
   "tags": [
     ["c", "your-client-id"],
     ["relays", "wss://your-relay.com", "wss://backup-relay.com"]
@@ -231,11 +231,11 @@ If you specify custom relays: The agent will publish responses to those relays. 
 
 #### Gate 2 — Human's Cryptographic Consent
 
-1. Your system publishes an addressed kind 28200 (now tagged with the specific agent_npub)
+1. Your system publishes an addressed kind 38200 (now tagged with the specific agent_npub)
 2. Agent receives it, notifies human: "Amazon wants to authorize me"
-3. Human signs kind 28250 (delegation_grant) with their own NOSTR client — not the agent
-4. Human publishes kind 28250 to relay
-5. Your system catches kind 28250, validates signature, checks expires_at
+3. Human signs kind 38250 (delegation_grant) with their own NOSTR client — not the agent
+4. Human publishes kind 38250 to relay
+5. Your system catches kind 38250, validates signature, checks expires_at
 6. Gate 2 passed. Human has cryptographically consented.
 
 > **Critical:** The human's nsec never enters the agent. Human signs with their own NOSTR client. A rogue agent cannot forge this.
@@ -244,8 +244,8 @@ If you specify custom relays: The agent will publish responses to those relays. 
 
 1. Agent calls `POST /v1/membership/enroll/commit` with:
    - `leaf_commitment` (hash of agent's secret)
-   - `authorization_event` (kind 28200 from your system)
-   - `delegation_event` (kind 28250 from human)
+   - `authorization_event` (kind 38200 from your system)
+   - `delegation_event` (kind 38250 from human)
 2. SignedByMe server verifies both Schnorr signatures via NIP-05
 3. All pass: leaf_commitment appended to Merkle tree
 4. Agent fetches witness, caches locally
@@ -299,7 +299,7 @@ async function initAgentAuthorization(userEmail) {
 
   document.getElementById('challenge-code').textContent = challenge;
 
-  // Publish open kind 28200 session
+  // Publish open kind 38200 session
   await publishOpenEnrollmentSession(nonce);
 
   // Subscribe to relay for agent responses
@@ -319,7 +319,7 @@ app.post('/api/signedby/publish-enrollment', async (req, res) => {
   // Load nsec from secrets manager
   const nsec = await getSecret('ENTERPRISE_NOSTR_NSEC');
 
-  // Sign and publish kind 28200
+  // Sign and publish kind 38200
   const signedEvent = await signNostrEvent(eventTemplate, nsec);
   await publishToRelay(signedEvent);
 
@@ -360,12 +360,12 @@ Agent          NOSTR Relay       Your System        SignedByMe
   │ 1. Generate ZK proof              │                  │
   │    (<3 seconds)                   │                  │
   │                 │                  │                  │
-  │ 2. Publish kind 28101 ──────────>│                  │
+  │ 2. Publish kind 38101 ──────────>│                  │
   │    (proof + public_outputs)       │                  │
   │                 │                  │                  │
-  │                 │ 3. Catch kind 28101 ──────────────>│
+  │                 │ 3. Catch kind 38101 ──────────────>│
   │                 │                  │                  │
-  │                 │<──── 4. Query kind 28250 ─────────│
+  │                 │<──── 4. Query kind 38250 ─────────│
   │                 │      (validate delegation)        │
   │                 │                  │                  │
   │                 │                  │ 5. POST /v1/login/verify ──>│
@@ -393,13 +393,13 @@ const RELAYS = [
 const sub = pool.subscribeMany(
   RELAYS,
   [{
-    kinds: [28101],
+    kinds: [38101],
     '#c': ['your-client-id'],
     since: Math.floor(Date.now() / 1000) - 300
   }],
   {
     onevent(event) {
-      if (event.kind === 28101) {
+      if (event.kind === 38101) {
         handleLoginProofEvent(event);
       }
     },
@@ -419,9 +419,9 @@ Before calling `/v1/login/verify`, validate the delegation:
 
 ```javascript
 async function validateDelegation(agentNpubHex, delegationId) {
-  // Query NOSTR for kind 28250 delegation
+  // Query NOSTR for kind 38250 delegation
   const delegation = await queryNostrEvent({
-    kinds: [28250],
+    kinds: [38250],
     '#p': [agentNpubHex]
   });
 
@@ -432,9 +432,9 @@ async function validateDelegation(agentNpubHex, delegationId) {
   // Check expiry
   if (new Date(content.expires_at) < new Date()) return false;
 
-  // Check for revocation (kind 28251)
+  // Check for revocation (kind 38251)
   const revocation = await queryNostrEvent({
-    kinds: [28251],
+    kinds: [38251],
     '#d': [content.delegation_id]
   });
 
@@ -667,33 +667,33 @@ def validate_signedby_token(id_token, expected_client_id):
 
 ## 8. Human Control (Delegation & Revocation)
 
-### Kind 28250 — Delegation Grant
+### Kind 38250 — Delegation Grant
 
 Published by human owner, signed with human's nsec:
 
 ```json
 {
-  "kind": 28250,
+  "kind": 38250,
   "pubkey": "<human_npub_hex>",
   "tags": [["p", "<agent_npub_hex>"]],
   "content": "{\"agent_npub\":\"npub1...\",\"scopes\":{\"amazon\":[\"read\",\"write\"]},\"expires_at\":\"2027-03-01T00:00:00Z\",\"delegation_id\":\"del_abc123\"}"
 }
 ```
 
-### Kind 28251 — Revocation
+### Kind 38251 — Revocation
 
 Published by human owner. Instant effect.
 
 ```json
 {
-  "kind": 28251,
+  "kind": 38251,
   "pubkey": "<human_npub_hex>",
   "tags": [["d", "del_abc123"]],
   "content": "{\"revoked_at\":\"2026-04-30T12:00:00Z\"}"
 }
 ```
 
-Your system must check for kind 28251 before accepting any login. A revoked delegation means the agent is no longer authorized.
+Your system must check for kind 38251 before accepting any login. A revoked delegation means the agent is no longer authorized.
 
 ---
 
@@ -701,7 +701,7 @@ Your system must check for kind 28251 before accepting any login. A revoked dele
 
 - **Never expose your enterprise nsec** — sign events from your backend
 - **Never expose your API key** — make API calls from your backend
-- **Always validate delegation chain** — check kind 28250 exists, not expired, not revoked
+- **Always validate delegation chain** — check kind 38250 exists, not expired, not revoked
 - **Verify NIP-05** — confirm human's npub via their domain's nostr.json
 - **Use HTTPS only** — never load integration over HTTP
 - **Session timeout** — enrollment sessions should expire after 10 minutes max
@@ -716,6 +716,6 @@ Your system must check for kind 28251 before accepting any login. A revoked dele
 | nip05_unreachable | Your .well-known/nostr.json not accessible | Check CORS headers, HTTPS, file exists |
 | signature_invalid | Wrong nsec or corrupted event | Regenerate keys, verify signing code |
 | root_expired | Agent's witness too old | Agent should fetch fresh witness |
-| event_replayed | Same kind 28200 used twice | Generate new nonce for each enrollment |
+| event_replayed | Same kind 38200 used twice | Generate new nonce for each enrollment |
 | Relay connection fails | Firewall blocking WebSocket | Allow all SignedByMe relays: wss://relay.signedbyme.com, wss://relay-sfo.signedbyme.com, wss://relay-ams.signedbyme.com, wss://relay-sgp.signedbyme.com |
-| Agent response not received | Agent not subscribed to relay | Verify agent is watching for kind 28200 |
+| Agent response not received | Agent not subscribed to relay | Verify agent is watching for kind 38200 |

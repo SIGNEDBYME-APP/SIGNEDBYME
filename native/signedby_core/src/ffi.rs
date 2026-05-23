@@ -54,9 +54,9 @@ struct AgentState {
     nwc_uri: Option<String>,
     /// Email mapping: enterprise client_id → email address
     email_mapping: std::collections::HashMap<String, String>,
-    /// Pending enrollment client_id (set when kind 28200 detected)
+    /// Pending enrollment client_id (set when kind 38200 detected)
     pending_client_id: Option<String>,
-    /// Pending enrollment email (set when kind 28200 detected)
+    /// Pending enrollment email (set when kind 38200 detected)
     pending_email: Option<String>,
 }
 
@@ -314,9 +314,9 @@ pub type EnrollmentCallback = extern "C" fn(event_type: c_int, event_json: *cons
 /// Start the enrollment watcher (Option A: SDK handles everything)
 /// 
 /// Per Bible Gates 1-3:
-/// - Subscribes to relay for kind 28200 events
-/// - Auto-responds with kind 28202 when open session detected
-/// - Waits for human to sign kind 28250
+/// - Subscribes to relay for kind 38200 events
+/// - Auto-responds with kind 38202 when open session detected
+/// - Waits for human to sign kind 38250
 /// - Calls /v1/membership/enroll/commit automatically
 /// 
 /// # Arguments
@@ -346,7 +346,7 @@ pub extern "C" fn agent_start_enrollment_watcher(callback: EnrollmentCallback) -
     }
     
     // Callback will be invoked when:
-    // - event_type=1: Gate 1 - publishing kind 28202 response
+    // - event_type=1: Gate 1 - publishing kind 38202 response
     // - event_type=2: Gate 2 - received authorization or delegation
     // - event_type=3: Enrollment complete (event_json contains result)
     
@@ -495,7 +495,7 @@ pub extern "C" fn agent_submit_challenge_code(
         // Submit the challenge code
         match enrollment.submit_challenge_code(client_id_str, email_str, challenge_str).await {
             Ok(event_id) => {
-                eprintln!("[ffi] Gate 1 complete: Published kind 28202: {}", event_id);
+                eprintln!("[ffi] Gate 1 complete: Published kind 38202: {}", event_id);
                 Ok(())
             }
             Err(e) => {

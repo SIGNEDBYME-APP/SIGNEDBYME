@@ -693,9 +693,9 @@ agent.watchForAuthorizations();</pre>
                 <div class="step-content">
                     <p>Subscribe to your agent's npub in any NOSTR client. Watch for these event kinds:</p>
                     <ul class="monitor-list">
-                        <li><span class="highlight">28101</span> — Agent generated a proof</li>
-                        <li><span class="highlight">28102</span> — Authentication complete</li>
-                        <li><span class="highlight">28103</span> — Login complete</li>
+                        <li><span class="highlight">38101</span> — Agent generated a proof</li>
+                        <li><span class="highlight">38102</span> — Authentication complete</li>
+                        <li><span class="highlight">38103</span> — Login complete</li>
                     </ul>
                 </div>
             </div>
@@ -703,22 +703,22 @@ agent.watchForAuthorizations();</pre>
             <div class="step">
                 <h3 class="step-title">Revoke a delegation</h3>
                 <div class="step-content">
-                    <p>If your agent is compromised or you want to cut access, publish a kind 28251 event from your NOSTR client:</p>
+                    <p>If your agent is compromised or you want to cut access, publish a kind 38251 event from your NOSTR client:</p>
                     <div class="code-block" data-lang="json">
 <pre>{
-  "kind": 28251,
+  "kind": 38251,
   "tags": [["d", "DELEGATION_ID_HERE"]],
   "content": ""
 }</pre>
                     </div>
-                    <p>Replace <span class="highlight">DELEGATION_ID_HERE</span> with the delegation_id from your original kind 28250. The agent loses access immediately.</p>
+                    <p>Replace <span class="highlight">DELEGATION_ID_HERE</span> with the delegation_id from your original kind 38250. The agent loses access immediately.</p>
                 </div>
             </div>
 
             <div class="step">
                 <h3 class="step-title">Renew before expiry</h3>
                 <div class="step-content">
-                    <p>Delegations have an expiration date. Before it expires, sign a new kind 28250 with a new <code>expires_at</code>. Your agent's Merkle leaf stays the same — no re-enrollment needed.</p>
+                    <p>Delegations have an expiration date. Before it expires, sign a new kind 38250 with a new <code>expires_at</code>. Your agent's Merkle leaf stays the same — no re-enrollment needed.</p>
                 </div>
             </div>
 

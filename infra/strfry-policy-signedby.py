@@ -6,7 +6,7 @@ NIP-42 write-restricted policy plugin for SIGNEDBYME audit relay.
 
 Requirements:
 - Requires NIP-42 auth before accepting any write (publish)
-- Accept event kinds 28101, 28102, 28103 only — reject everything else
+- Accept event kinds 38101, 38102, 38103 only — reject everything else
 - Read/query access stays open to anyone (handled by strfry, not this plugin)
 
 Install:
@@ -21,7 +21,7 @@ import sys
 import json
 
 # SIGNEDBYME audit event kinds
-ALLOWED_KINDS = {28101, 28102, 28103}
+ALLOWED_KINDS = {38101, 38102, 38103}
 
 
 def process_event(input_data: dict) -> dict:
@@ -55,7 +55,7 @@ def process_event(input_data: dict) -> dict:
         return {
             "id": event_id,
             "action": "reject",
-            "msg": f"blocked: kind {event_kind} not allowed (only 28101, 28102, 28103)",
+            "msg": f"blocked: kind {event_kind} not allowed (only 38101, 38102, 38103)",
         }
     
     # 4. Event passes all checks — accept

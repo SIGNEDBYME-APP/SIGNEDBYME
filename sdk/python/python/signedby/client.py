@@ -65,7 +65,7 @@ class SignedByClient:
         Load a SignedByClient from a delegation file.
         
         Args:
-            path: Path to the delegation JSON file (kind 28250 event)
+            path: Path to the delegation JSON file (kind 38250 event)
             
         Returns:
             SignedByClient instance ready for authentication

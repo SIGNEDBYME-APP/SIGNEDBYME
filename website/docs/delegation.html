@@ -466,7 +466,7 @@
                 <span class="flow-arrow">→</span>
                 <div class="flow-step">
                     <div class="flow-box">
-                        Kind 28250
+                        Kind 38250
                         <span class="flow-label">Delegation Event</span>
                     </div>
                 </div>
@@ -501,17 +501,17 @@
                             <tr>
                                 <td><strong>Human</strong></td>
                                 <td>Your NOSTR keys</td>
-                                <td><code>28250</code> delegation, <code>28251</code> revocation</td>
+                                <td><code>38250</code> delegation, <code>38251</code> revocation</td>
                             </tr>
                             <tr>
                                 <td><strong>Agent</strong></td>
                                 <td>Derived from leaf_secret</td>
-                                <td><code>28101</code> proof, <code>28102</code> auth, <code>28103</code> login</td>
+                                <td><code>38101</code> proof, <code>38102</code> auth, <code>38103</code> login</td>
                             </tr>
                             <tr>
                                 <td><strong>Enterprise</strong></td>
                                 <td>Enterprise NOSTR keys</td>
-                                <td><code>28200</code> enrollment authorization</td>
+                                <td><code>38200</code> enrollment authorization</td>
                             </tr>
                         </tbody>
                     </table>
@@ -526,7 +526,7 @@
         <section class="section">
             <div class="section-header">
                 <div class="step-number">3</div>
-                <h2 class="section-title">Kind 28250 — Delegation Grant</h2>
+                <h2 class="section-title">Kind 38250 — Delegation Grant</h2>
             </div>
             
             <p class="intro-text">
@@ -538,7 +538,7 @@
                 <div class="card-content">
                     <div class="code-block" data-lang="json">
 <pre>{
-  "kind": 28250,
+  "kind": 38250,
   "pubkey": "&lt;your_npub_hex&gt;",
   "tags": [["p", "&lt;agent_npub_hex&gt;"]],
   "content": "{
@@ -617,7 +617,7 @@
         <section class="section">
             <div class="section-header">
                 <div class="step-number">4</div>
-                <h2 class="section-title">Kind 28251 — Revocation</h2>
+                <h2 class="section-title">Kind 38251 — Revocation</h2>
             </div>
             
             <p class="intro-text">
@@ -629,7 +629,7 @@
                 <div class="card-content">
                     <div class="code-block" data-lang="json">
 <pre>{
-  "kind": 28251,
+  "kind": 38251,
   "pubkey": "&lt;your_npub_hex&gt;",
   "tags": [["d", "del_abc123"]],
   "content": "",
@@ -643,7 +643,7 @@
                 <h3 class="card-title">How Revocation Works</h3>
                 <div class="card-content">
                     <ol class="numbered-list">
-                        <li>You publish kind 28251 with the <code>delegation_id</code> in the #d tag</li>
+                        <li>You publish kind 38251 with the <code>delegation_id</code> in the #d tag</li>
                         <li>Enterprise catches it on their next NOSTR query</li>
                         <li>Agent's next login attempt fails before reaching the server</li>
                         <li>No blocklist. No tree rebuild. No server involvement.</li>
@@ -670,14 +670,14 @@
                 <h3 class="card-title">Validation Flow</h3>
                 <div class="card-content">
                     <ol class="numbered-list">
-                        <li><strong>Catch agent's proof event</strong> — Agent publishes kind 28101 with proof, public outputs, and delegation_id</li>
-                        <li><strong>Query for delegation</strong> — Enterprise queries NOSTR: <code>{"kinds": [28250], "#p": ["&lt;agent_npub&gt;"]}</code></li>
+                        <li><strong>Catch agent's proof event</strong> — Agent publishes kind 38101 with proof, public outputs, and delegation_id</li>
+                        <li><strong>Query for delegation</strong> — Enterprise queries NOSTR: <code>{"kinds": [38250], "#p": ["&lt;agent_npub&gt;"]}</code></li>
                         <li><strong>Verify the delegation:</strong>
                             <ul class="bullet-list" style="margin-top: 0.5rem;">
                                 <li>Signed by trusted human (NIP-05 verified)</li>
                                 <li><code>expires_at</code> is in the future</li>
                                 <li><code>delegation_id</code> matches the proof event</li>
-                                <li>No kind 28251 revocation exists for this delegation_id</li>
+                                <li>No kind 38251 revocation exists for this delegation_id</li>
                             </ul>
                         </li>
                         <li><strong>Call /v1/login/verify</strong> — Server confirms Merkle root, returns OIDC token</li>
@@ -705,7 +705,7 @@
                 <div class="card-content">
                     <ol class="numbered-list">
                         <li>Pay monthly Lightning subscription ($12 in BTC)</li>
-                        <li>Publish new kind 28250 with new <code>expires_at</code> and new <code>delegation_id</code></li>
+                        <li>Publish new kind 38250 with new <code>expires_at</code> and new <code>delegation_id</code></li>
                         <li>Agent's Merkle leaf stays the same — no re-enrollment needed</li>
                         <li>Server is completely uninvolved in renewal</li>
                     </ol>
@@ -748,32 +748,32 @@
                         </thead>
                         <tbody>
                             <tr>
-                                <td><code>28200</code></td>
+                                <td><code>38200</code></td>
                                 <td>Enrollment Authorization</td>
                                 <td>Enterprise</td>
                             </tr>
                             <tr>
-                                <td><code>28250</code></td>
+                                <td><code>38250</code></td>
                                 <td>Delegation Grant</td>
                                 <td>Human</td>
                             </tr>
                             <tr>
-                                <td><code>28251</code></td>
+                                <td><code>38251</code></td>
                                 <td>Revocation</td>
                                 <td>Human</td>
                             </tr>
                             <tr>
-                                <td><code>28101</code></td>
+                                <td><code>38101</code></td>
                                 <td>Proof Event</td>
                                 <td>Agent</td>
                             </tr>
                             <tr>
-                                <td><code>28102</code></td>
+                                <td><code>38102</code></td>
                                 <td>Auth Complete</td>
                                 <td>Agent</td>
                             </tr>
                             <tr>
-                                <td><code>28103</code></td>
+                                <td><code>38103</code></td>
                                 <td>Login Complete</td>
                                 <td>Agent</td>
                             </tr>

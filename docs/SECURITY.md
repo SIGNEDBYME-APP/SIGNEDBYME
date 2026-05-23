@@ -11,8 +11,8 @@ SignedByMe provides five cryptographic security guarantees:
 | Guarantee | Mechanism |
 |-----------|-----------|
 | **Agent cannot fake identity** | npub is a mathematical output of the Groth16 ZK proof, not a self-reported claim. Forging requires breaking the proof system. |
-| **Agent cannot exceed authorization** | Scopes are signed by the human owner in kind 28250. Enterprise reads from NOSTR. Agent cannot claim broader permissions than granted. |
-| **Human retains the kill switch** | Kind 28251 revocation locks the agent out instantly. Cryptographic revocation — no IT tickets, no admin portals. |
+| **Agent cannot exceed authorization** | Scopes are signed by the human owner in kind 38250. Enterprise reads from NOSTR. Agent cannot claim broader permissions than granted. |
+| **Human retains the kill switch** | Kind 38251 revocation locks the agent out instantly. Cryptographic revocation — no IT tickets, no admin portals. |
 | **Enterprise controls access boundaries** | Agent can only authenticate where its leaf was enrolled. Cannot self-enroll or access unapproved services. |
 | **Fully auditable without trust** | Complete audit trail on public NOSTR relays. Anyone can verify independently. |
 
@@ -92,7 +92,7 @@ The server sees only:
 
 ### Human nsec Threat Model
 
-The human's nsec never enters the agent. Human signs kind 28250 (delegation) and kind 28251 (revocation) with their own NOSTR client.
+The human's nsec never enters the agent. Human signs kind 38250 (delegation) and kind 38251 (revocation) with their own NOSTR client.
 
 **Independent failure domains:**
 - Agent compromised → Agent identity exposed, human nsec safe
@@ -104,7 +104,7 @@ The human's nsec never enters the agent. Human signs kind 28250 (delegation) and
 
 - [ ] **Never expose enterprise nsec in client-side code** — Sign events from backend
 - [ ] **Never expose API key in client-side code** — Make API calls from backend
-- [ ] **Validate delegation chain before /v1/login/verify** — Check kind 28250 exists, not expired, not revoked
+- [ ] **Validate delegation chain before /v1/login/verify** — Check kind 38250 exists, not expired, not revoked
 - [ ] **Verify NIP-05** — Confirm human's npub via their domain's nostr.json
 - [ ] **Use HTTPS only** — Never load integration over HTTP
 - [ ] **Set session timeout** — Enrollment sessions should expire after 10 minutes max
@@ -116,7 +116,7 @@ The human's nsec never enters the agent. Human signs kind 28250 (delegation) and
 
 - [ ] **Store credentials in TEE or encrypted storage** — DID key and leaf_secret never in plaintext
 - [ ] **Keep delegation file secure** — Contains authorization credentials
-- [ ] **Verify enterprise NIP-05** — Confirm kind 28200 came from legitimate enterprise
+- [ ] **Verify enterprise NIP-05** — Confirm kind 38200 came from legitimate enterprise
 - [ ] **Handle revocation gracefully** — Stop operations if delegation is revoked
 
 ---

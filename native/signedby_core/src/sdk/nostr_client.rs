@@ -8,8 +8,8 @@
 //
 // Per Bible Section 15 Decision 941 (Apr 14, 2026):
 // - Agent never holds human nsec
-// - Human signs kind 28250 and kind 28251 with their own NOSTR client
-// - Agent only publishes acknowledgment events (28102, 28103)
+// - Human signs kind 38250 and kind 38251 with their own NOSTR client
+// - Agent only publishes acknowledgment events (38102, 38103)
 
 use anyhow::{Result, anyhow};
 use nostr_sdk::prelude::*;
@@ -32,13 +32,13 @@ pub const DEFAULT_RELAYS: &[&str] = &[
 pub const RELAY_URL: &str = "wss://relay.signedbyme.com";
 
 /// Event kinds for Phase 26 flow
-pub const KIND_ENROLLMENT_AUTH: u16 = 28200;    // Enterprise → agent authorization
-pub const KIND_PROOF_EVENT: u16 = 28101;        // Agent publishes ZK proof
-pub const KIND_DELEGATION_ACK: u16 = 28102;     // Agent acks delegation (28250)
-pub const KIND_REVOCATION_ACK: u16 = 28103;     // Agent acks revocation (28251)
-pub const KIND_HUMAN_DELEGATION: u16 = 28250;   // Human → agent delegation
-pub const KIND_HUMAN_REVOCATION: u16 = 28251;   // Human revokes agent
-pub const KIND_ENROLLMENT_RESPONSE: u16 = 28202; // Agent responds to open enrollment session
+pub const KIND_ENROLLMENT_AUTH: u16 = 38200;    // Enterprise → agent authorization
+pub const KIND_PROOF_EVENT: u16 = 38101;        // Agent publishes ZK proof
+pub const KIND_DELEGATION_ACK: u16 = 38102;     // Agent acks delegation (38250)
+pub const KIND_REVOCATION_ACK: u16 = 38103;     // Agent acks revocation (38251)
+pub const KIND_HUMAN_DELEGATION: u16 = 38250;   // Human → agent delegation
+pub const KIND_HUMAN_REVOCATION: u16 = 38251;   // Human revokes agent
+pub const KIND_ENROLLMENT_RESPONSE: u16 = 38202; // Agent responds to open enrollment session
 
 /// Proof event data for publishing
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -124,7 +124,7 @@ impl NostrClient {
         Ok(())
     }
     
-    /// Add custom relays (e.g., from enterprise kind 28200 "relays" tag)
+    /// Add custom relays (e.g., from enterprise kind 38200 "relays" tag)
     /// 
     /// Call this when an enterprise specifies custom relays in their authorization event.
     /// The agent will publish responses to these relays in addition to defaults.
@@ -174,7 +174,7 @@ impl NostrClient {
         self.client.clone()
     }
     
-    /// Publish proof event (kind 28101)
+    /// Publish proof event (kind 38101)
     /// 
     /// Published after successful ZK proof generation.
     /// Tags: session_id, client_id, merkle_root
@@ -203,9 +203,9 @@ impl NostrClient {
         Ok(output.val)
     }
     
-    /// Publish delegation acknowledgment (kind 28102)
+    /// Publish delegation acknowledgment (kind 38102)
     /// 
-    /// Agent confirms receipt of kind 28250 from human.
+    /// Agent confirms receipt of kind 38250 from human.
     /// References the delegation event by ID.
     pub async fn publish_delegation_ack(&self, delegation_event_id: EventId) -> Result<EventId> {
         let tags = vec![
@@ -228,9 +228,9 @@ impl NostrClient {
         Ok(output.val)
     }
     
-    /// Publish revocation acknowledgment (kind 28103)
+    /// Publish revocation acknowledgment (kind 38103)
     /// 
-    /// Agent confirms receipt of kind 28251 from human.
+    /// Agent confirms receipt of kind 38251 from human.
     /// References the revocation event by ID.
     pub async fn publish_revocation_ack(&self, revocation_event_id: EventId) -> Result<EventId> {
         let tags = vec![
@@ -253,9 +253,9 @@ impl NostrClient {
         Ok(output.val)
     }
     
-    /// Publish enrollment response (kind 28202)
+    /// Publish enrollment response (kind 38202)
     /// 
-    /// Agent's response to an open kind 28200 session from enterprise.
+    /// Agent's response to an open kind 38200 session from enterprise.
     /// Per Bible Gate 1: Contains email, agent npub, and challenge code.
     /// 
     /// # Arguments
@@ -286,7 +286,7 @@ impl NostrClient {
         Ok(output.val)
     }
     
-    /// Poll for enrollment authorization events (kind 28200)
+    /// Poll for enrollment authorization events (kind 38200)
     /// 
     /// These are signed by the enterprise and tagged with the agent's npub.
     /// Returns events where this agent is authorized.
@@ -302,7 +302,7 @@ impl NostrClient {
         Ok(events)
     }
     
-    /// Poll for human delegation events (kind 28250)
+    /// Poll for human delegation events (kind 38250)
     /// 
     /// Human → agent authorization events.
     /// Filtered by human's npub (the author).
@@ -322,7 +322,7 @@ impl NostrClient {
         Ok(events)
     }
     
-    /// Poll for revocation events (kind 28251)
+    /// Poll for revocation events (kind 38251)
     /// 
     /// Human revokes agent authorization.
     /// Filtered by human's npub (the author).
@@ -342,14 +342,14 @@ impl NostrClient {
         Ok(events)
     }
     
-    /// Subscribe to authorization events (kind 28200) in real-time
+    /// Subscribe to authorization events (kind 38200) in real-time
     /// 
-    /// Per Bible: "The agent is subscribed to the relay watching for kind 28200 events"
+    /// Per Bible: "The agent is subscribed to the relay watching for kind 38200 events"
     /// This is a persistent subscription, not one-shot polling.
     /// 
     /// Returns a subscription handle. Events are delivered via the client's notification handler.
     pub async fn subscribe_authorization_events(&self) -> Result<SubscriptionId> {
-        // Filter for kind 28200 events tagged with this agent's npub
+        // Filter for kind 38200 events tagged with this agent's npub
         let addressed_filter = Filter::new()
             .kind(Kind::Custom(KIND_ENROLLMENT_AUTH))
             .custom_tag(SingleLetterTag::lowercase(Alphabet::P), vec![self.agent_npub.clone()]);
@@ -363,13 +363,13 @@ impl NostrClient {
         Ok(output.val)
     }
     
-    /// Subscribe to delegation events (kind 28250) in real-time
+    /// Subscribe to delegation events (kind 38250) in real-time
     /// 
-    /// Per Bible Gate 2: "The agent detects kind 28250 on the relay"
+    /// Per Bible Gate 2: "The agent detects kind 38250 on the relay"
     /// 
     /// Returns a subscription handle. Events are delivered via the client's notification handler.
     pub async fn subscribe_delegation_events(&self) -> Result<SubscriptionId> {
-        // Filter for kind 28250 events tagging this agent (supports both bech32 and hex)
+        // Filter for kind 38250 events tagging this agent (supports both bech32 and hex)
         let filter = Filter::new()
             .kind(Kind::Custom(KIND_HUMAN_DELEGATION))
             .custom_tag(SingleLetterTag::lowercase(Alphabet::P), vec![

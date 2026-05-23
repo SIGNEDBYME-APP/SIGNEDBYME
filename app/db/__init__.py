@@ -11,7 +11,7 @@ Tables:
 - merkle_witnesses: Per-leaf membership witnesses
 - audit_log: Optional debugging
 
-Key change: enrollment_id eliminated — kind 28200 NOSTR event signature IS the authorization
+Key change: enrollment_id eliminated — kind 38200 NOSTR event signature IS the authorization
 """
 
 import sqlite3
@@ -136,7 +136,7 @@ def _run_migrations(conn: sqlite3.Connection) -> None:
             ("created_at", "INTEGER DEFAULT (strftime('%s', 'now'))"),
         ],
         # enrollment_nonces table REMOVED
-        # Nonce eliminated. Authorization via kind 28200 NOSTR event signature.
+        # Nonce eliminated. Authorization via kind 38200 NOSTR event signature.
         "used_event_ids": [
             ("event_id", "TEXT"),
             ("client_id", "TEXT"),
@@ -192,7 +192,7 @@ def transaction():
 
 # ============================================================================
 # MERKLE LEAVES 
-# Authorization via kind 28200 NOSTR event signature
+# Authorization via kind 38200 NOSTR event signature
 # ============================================================================
 
 def add_merkle_leaf(
@@ -205,7 +205,7 @@ def add_merkle_leaf(
     """
     Add a leaf to the Merkle tree.
     
-    Authorization is the kind 28200 NOSTR event signature.
+    Authorization is the kind 38200 NOSTR event signature.
     No enrollment_id needed.
     
     Returns: leaf_id (primary key)

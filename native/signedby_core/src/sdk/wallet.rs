@@ -261,7 +261,7 @@ impl NwcWallet {
     
     /// Watch subscription expiry and trigger renewal
     /// 
-    /// Per Bible: Watch kind 28250 expires_at on NOSTR — trigger renewal 72 hours before expiry
+    /// Per Bible: Watch kind 38250 expires_at on NOSTR — trigger renewal 72 hours before expiry
     pub async fn check_subscription_renewal_needed<S: SecureStorage>(
         &self,
         identity: &AgentIdentity<S>,
@@ -270,7 +270,7 @@ impl NwcWallet {
         let state = identity.load()?;
         let agent_npub = &state.agent_npub;
         
-        // Query kind 28250 delegation events for this agent
+        // Query kind 38250 delegation events for this agent
         let events = self.nostr_client.poll_delegation_events(agent_npub).await
             .map_err(|e| anyhow!("Failed to query delegation events: {}", e))?;
         

@@ -93,7 +93,7 @@ impl NostrClient {
         self.client.clone()
     }
     
-    /// Publish proof_event (kind 28101) to all connected relays
+    /// Publish proof_event (kind 38101) to all connected relays
     /// 
     /// Contains: proof bytes, merkle_root, npub, both BOLT11 invoices
     /// Tags: nonce, client_id
@@ -124,7 +124,7 @@ impl NostrClient {
         Ok(output.val)
     }
     
-    /// Publish payment_receipt (kind 28102) after receiving payment
+    /// Publish payment_receipt (kind 38102) after receiving payment
     pub async fn publish_payment_receipt(&self, event: &PaymentReceiptEvent) -> Result<EventId> {
         let tags = vec![
             Tag::custom(TagKind::Custom("nonce".into()), vec![event.nonce.clone()]),
@@ -146,7 +146,7 @@ impl NostrClient {
         Ok(output.val)
     }
     
-    /// Publish login_complete (kind 28103) after successful authentication
+    /// Publish login_complete (kind 38103) after successful authentication
     pub async fn publish_login_complete(&self, event: &LoginCompleteEvent) -> Result<EventId> {
         let tags = vec![
             Tag::custom(TagKind::Custom("nonce".into()), vec![event.nonce.clone()]),

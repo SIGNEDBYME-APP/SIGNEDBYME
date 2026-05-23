@@ -1,13 +1,13 @@
 // nostr/events.rs - NOSTR event structures for SIGNEDBYME audit trail
 //
 // Event kinds:
-// - 28101: proof_event (proof published after generation)
-// - 28102: payment_receipt (after receiving payment)
-// - 28103: login_complete (after successful authentication)
+// - 38101: proof_event (proof published after generation)
+// - 38102: payment_receipt (after receiving payment)
+// - 38103: login_complete (after successful authentication)
 
 use serde::{Deserialize, Serialize};
 
-/// Proof event (kind 28101) - Published after Groth16 proof generation
+/// Proof event (kind 38101) - Published after Groth16 proof generation
 /// 
 /// Contains the proof, public outputs, and both BOLT11 invoices.
 /// Enterprise watches NOSTR for this event (tagged with nonce).
@@ -64,7 +64,7 @@ impl ProofEvent {
     }
 }
 
-/// Payment receipt event (kind 28102) - Published after receiving 90% payment
+/// Payment receipt event (kind 38102) - Published after receiving 90% payment
 /// 
 /// Proves the user received their share. Part of the audit trail.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -105,7 +105,7 @@ impl PaymentReceiptEvent {
     }
 }
 
-/// Login complete event (kind 28103) - Published after successful authentication
+/// Login complete event (kind 38103) - Published after successful authentication
 /// 
 /// Marks the end of a successful login flow. Completes the audit trail.
 #[derive(Debug, Clone, Serialize, Deserialize)]

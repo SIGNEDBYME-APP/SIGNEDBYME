@@ -11,8 +11,8 @@ SignedByMe is the identity layer for autonomous agents. Five cryptographic layer
 | Layer | What it prevents |
 |-------|------------------|
 | Agent cannot lie about identity | npub is a mathematical output of the ZK proof, not a claim. Forging requires breaking Groth16. |
-| Agent cannot exceed authorization | Kind 28250 scopes are signed by the human owner. Enterprise reads from NOSTR. Agent cannot claim broader permissions than the human granted. |
-| Human retains the kill switch | Kind 28251 revocation locks the agent out instantly. No IT ticket. No admin portal. Cryptographic revocation in seconds. |
+| Agent cannot exceed authorization | Kind 38250 scopes are signed by the human owner. Enterprise reads from NOSTR. Agent cannot claim broader permissions than the human granted. |
+| Human retains the kill switch | Kind 38251 revocation locks the agent out instantly. No IT ticket. No admin portal. Cryptographic revocation in seconds. |
 | Enterprise controls their Merkle tree | Agent can only authenticate where its leaf was enrolled. Cannot self-enroll or access unapproved services. |
 | Auditable without trusting anyone | Full trail on public NOSTR relays. CISO verifies independently without asking SignedByMe for anything. |
 
@@ -114,9 +114,9 @@ The circuit is frozen. Structure will not change.
 
 ### Revocation
 
-Kind 28251 is the only revocation mechanism.
+Kind 38251 is the only revocation mechanism.
 
-1. Human publishes kind 28251 tagged with the delegation_id
+1. Human publishes kind 38251 tagged with the delegation_id
 2. Enterprise catches it on their next NOSTR query
 3. Agent's next login fails before /v1/login/verify is ever called
 
@@ -150,9 +150,9 @@ The cryptographic chain (DID → leaf_secret → nsec inside circuit → npub pu
 
 | Keypair | Who holds it | Used for | Verified via |
 |---------|--------------|----------|--------------|
-| Human nsec/npub | Human owner | Signs kind 28250 (delegation), kind 28251 (revocation) | NIP-05 at human's domain |
-| Agent nsec/npub | Derived from leaf_secret inside circuit | Signs kind 28101/28102/28103 | npub is public output of ZK proof |
-| Enterprise nsec/npub | Enterprise | Signs kind 28200 (enrollment authorization) | NIP-05 at enterprise domain |
+| Human nsec/npub | Human owner | Signs kind 38250 (delegation), kind 38251 (revocation) | NIP-05 at human's domain |
+| Agent nsec/npub | Derived from leaf_secret inside circuit | Signs kind 38101/38102/38103 | npub is public output of ZK proof |
+| Enterprise nsec/npub | Enterprise | Signs kind 38200 (enrollment authorization) | NIP-05 at enterprise domain |
 
 ---
 
@@ -160,13 +160,13 @@ The cryptographic chain (DID → leaf_secret → nsec inside circuit → npub pu
 
 | Kind | Name | Publisher | Purpose |
 |------|------|-----------|---------|
-| 28101 | proof_event | Agent | ZK proof + public_outputs + delegation_id reference |
-| 28102 | auth_complete | Agent | Audit trail — login flow completed |
-| 28103 | login_complete | Agent | Audit chain closure |
-| 28200 | enrollment_authorization | Enterprise | Authorization for agent enrollment |
-| 28202 | enrollment_response | Agent | Agent's response during genesis (email + npub) |
-| 28250 | delegation_grant | Human | Grants agent authority for specific enterprises |
-| 28251 | delegation_revocation | Human | Revokes a specific delegation |
+| 38101 | proof_event | Agent | ZK proof + public_outputs + delegation_id reference |
+| 38102 | auth_complete | Agent | Audit trail — login flow completed |
+| 38103 | login_complete | Agent | Audit chain closure |
+| 38200 | enrollment_authorization | Enterprise | Authorization for agent enrollment |
+| 38202 | enrollment_response | Agent | Agent's response during genesis (email + npub) |
+| 38250 | delegation_grant | Human | Grants agent authority for specific enterprises |
+| 38251 | delegation_revocation | Human | Revokes a specific delegation |
 
 ---
 

@@ -1,8 +1,8 @@
 // sdk/enrollment.rs - Enrollment Bootstrap (Phase 9A.4)
 //
 // Per Bible Section 9A.4:
-// - Poll NOSTR for kind 28200 (enterprise authorization) tagged with agent npub
-// - Poll NOSTR for kind 28250 (human delegation) from human owner
+// - Poll NOSTR for kind 38200 (enterprise authorization) tagged with agent npub
+// - Poll NOSTR for kind 38250 (human delegation) from human owner
 // - Validate both events exist and match before enrollment
 // - Single enroll/commit call with leaf_commitment + event IDs
 // - Cache Merkle witness for future proof generation
@@ -49,9 +49,9 @@ pub struct EnrollmentResult {
 struct EnrollCommitRequest {
     /// Leaf commitment calculated from agent's leaf_secret
     leaf_commitment: String,
-    /// Full kind 28200 event (enterprise authorization)
+    /// Full kind 38200 event (enterprise authorization)
     authorization_event: serde_json::Value,
-    /// Full kind 28250 event (human delegation)
+    /// Full kind 38250 event (human delegation)
     delegation_event: serde_json::Value,
 }
 
@@ -107,7 +107,7 @@ struct EnrollmentState {
     gate1_complete: bool,
     authorization_event: Option<Event>,
     delegation_event: Option<Event>,
-    /// Pending enrollment info (set when kind 28200 detected, waiting for human to enter challenge)
+    /// Pending enrollment info (set when kind 38200 detected, waiting for human to enter challenge)
     pending_client_id: Option<String>,
     pending_email: Option<String>,
 }
@@ -166,11 +166,11 @@ impl EnrollmentBootstrap {
     /// Watch for enrollment events and execute enrollment when both are found
     /// 
     /// Polls NOSTR for:
-    /// - kind 28200 tagged with this agent's npub (enterprise authorization)
-    /// - kind 28250 from the human owner (human delegation)
+    /// - kind 38200 tagged with this agent's npub (enterprise authorization)
+    /// - kind 38250 from the human owner (human delegation)
     /// 
     /// When both are found, executes enrollment via API.
-    /// If the enterprise specifies custom relays in their kind 28200, the agent
+    /// If the enterprise specifies custom relays in their kind 38200, the agent
     /// will add those relays and publish responses to them (Phase 29.4).
     pub async fn watch_for_enrollment<S: SecureStorage>(
         &mut self,
@@ -184,10 +184,10 @@ impl EnrollmentBootstrap {
         for attempt in 1..=max_attempts {
             eprintln!("[enrollment] Poll attempt {}/{}", attempt, max_attempts);
             
-            // Poll for authorization events (kind 28200)
+            // Poll for authorization events (kind 38200)
             let auth_events = self.poll_authorization_events(agent_npub).await?;
             
-            // Poll for delegation events (kind 28250)
+            // Poll for delegation events (kind 38250)
             let delegation_events = self.poll_delegation_events(human_npub).await?;
             
             // Check if we have matching events
@@ -225,9 +225,9 @@ impl EnrollmentBootstrap {
     /// Start the active enrollment watcher (Option A: SDK handles everything)
     /// 
     /// Per Bible Gates 1-3:
-    /// 1. Subscribes to kind 28200 (open session) → auto-responds with kind 28202
-    /// 2. Subscribes to kind 28200 (addressed) → waits for human
-    /// 3. Subscribes to kind 28250 (delegation) → calls enroll/commit
+    /// 1. Subscribes to kind 38200 (open session) → auto-responds with kind 38202
+    /// 2. Subscribes to kind 38200 (addressed) → waits for human
+    /// 3. Subscribes to kind 38250 (delegation) → calls enroll/commit
     /// 
     /// This is subscription-based (not polling) for real-time response.
     /// 
@@ -253,10 +253,10 @@ impl EnrollmentBootstrap {
         let email_mapping = self.email_mapping.clone();
         let on_gate_complete = Arc::new(on_gate_complete);
         
-        // Subscribe to authorization events (kind 28200)
+        // Subscribe to authorization events (kind 38200)
         let _auth_sub = self.nostr_client.subscribe_authorization_events().await?;
         
-        // Subscribe to delegation events (kind 28250)
+        // Subscribe to delegation events (kind 38250)
         let _deleg_sub = self.nostr_client.subscribe_delegation_events().await?;
         
         // Set up notification handler
@@ -363,7 +363,7 @@ impl EnrollmentBootstrap {
                         // Gate 2→3: Human signed delegation
                         eprintln!("[enrollment] Received delegation from human");
                         st.delegation_event = Some(e);
-                        on_gate_complete(2, "Received kind 28250 delegation from human");
+                        on_gate_complete(2, "Received kind 38250 delegation from human");
                         Action::CheckEnrollment
                     }
                 }
@@ -446,19 +446,19 @@ impl EnrollmentBootstrap {
     ) -> Result<String> {
         eprintln!("[enrollment] Submitting challenge code for client_id: {}", client_id);
         
-        // Publish kind 28202 enrollment response
+        // Publish kind 38202 enrollment response
         let event_id = self.nostr_client.publish_enrollment_response(
             client_id,
             email,
             challenge,
         ).await?;
         
-        eprintln!("[enrollment] Gate 1 complete: Published kind 28202: {}", event_id.to_hex());
+        eprintln!("[enrollment] Gate 1 complete: Published kind 38202: {}", event_id.to_hex());
         
         Ok(event_id.to_hex())
     }
     
-    /// Poll for authorization events (kind 28200) tagged with agent npub
+    /// Poll for authorization events (kind 38200) tagged with agent npub
     async fn poll_authorization_events(&self, agent_npub: &str) -> Result<Vec<AuthorizationEvent>> {
         let events = self.nostr_client.poll_enrollment_events(agent_npub).await?;
         
@@ -490,7 +490,7 @@ impl EnrollmentBootstrap {
         Ok(auth_events)
     }
     
-    /// Poll for delegation events (kind 28250) from human
+    /// Poll for delegation events (kind 38250) from human
     async fn poll_delegation_events(&self, human_npub: &str) -> Result<Vec<DelegationEvent>> {
         let events = self.nostr_client.poll_delegation_events(human_npub).await?;
         
@@ -519,8 +519,8 @@ impl EnrollmentBootstrap {
     /// 
     /// Calls POST /v1/membership/enroll/commit with:
     /// - leaf_commitment (calculated from leaf_secret)
-    /// - authorization_event (full kind 28200 event)
-    /// - delegation_event (full kind 28250 event)
+    /// - authorization_event (full kind 38200 event)
+    /// - delegation_event (full kind 38250 event)
     pub async fn execute_enrollment<S: SecureStorage>(
         &self,
         authorization_event: &Event,

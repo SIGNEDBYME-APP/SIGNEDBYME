@@ -7,7 +7,7 @@
 //
 // Per Bible Section 15 Decision 941 (Apr 14, 2026):
 // - Agent never holds human nsec
-// - Human signs kind 28250 and kind 28251 with their own NOSTR client
+// - Human signs kind 38250 and kind 38251 with their own NOSTR client
 //
 // The identity chain (from Bible Section 2.1):
 //   DID private key → leaf_secret → leaf_commitment

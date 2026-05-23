@@ -17,9 +17,9 @@ pub use events::{ProofEvent, PaymentReceiptEvent, LoginCompleteEvent};
 pub use nsec_derivation::derive_nsec_from_leaf_secret;
 
 // Event kinds for SIGNEDBYME audit trail
-pub const KIND_PROOF_EVENT: u16 = 28101;
-pub const KIND_PAYMENT_RECEIPT: u16 = 28102;
-pub const KIND_LOGIN_COMPLETE: u16 = 28103;
+pub const KIND_PROOF_EVENT: u16 = 38101;
+pub const KIND_PAYMENT_RECEIPT: u16 = 38102;
+pub const KIND_LOGIN_COMPLETE: u16 = 38103;
 
 // Default relay list (SIGNEDBYME audit relay is always first)
 pub const DEFAULT_RELAYS: &[&str] = &[

@@ -63,7 +63,7 @@ Real Bitcoin payment required to create each agent identity. Economic commitment
 |-----------|--------------|
 | Agent cannot fake identity | npub is a mathematical output of the ZK proof |
 | Agent cannot exceed permissions | Scopes signed by human owner |
-| Human keeps instant kill switch | Kind 28251 revocation is immediate |
+| Human keeps instant kill switch | Kind 38251 revocation is immediate |
 | Enterprise controls access boundaries | Agent can only authenticate where enrolled |
 | Fully auditable without trust | Complete trail on public NOSTR relays |
 

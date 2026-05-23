@@ -25,7 +25,7 @@ SIGNEDBY_RELAYS = [
 
 @dataclass
 class AuthorizationEvent:
-    """An authorization request from an enterprise (kind 28200)."""
+    """An authorization request from an enterprise (kind 38200)."""
     enterprise: str
     client_id: str
     scopes: list[str]
@@ -117,7 +117,7 @@ class SignedByAgent:
     
     async def watch_for_authorizations(self) -> AsyncIterator[AuthorizationEvent]:
         """
-        Watch for kind 28200 authorization events addressed to this agent.
+        Watch for kind 38200 authorization events addressed to this agent.
         
         Yields:
             AuthorizationEvent for each incoming authorization request
@@ -137,7 +137,7 @@ class SignedByAgent:
     
     def get_activity_log(self, limit: int = 100) -> list[Dict[str, Any]]:
         """
-        Get recent agent activity (kinds 28101, 28102, 28103).
+        Get recent agent activity (kinds 38101, 38102, 38103).
         
         Args:
             limit: Maximum number of events to return

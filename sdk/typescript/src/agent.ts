@@ -101,7 +101,7 @@ export class SignedByAgent {
   }
 
   /**
-   * Watch for kind 28200 authorization events addressed to this agent.
+   * Watch for kind 38200 authorization events addressed to this agent.
    *
    * @yields AuthorizationEvent for each incoming authorization request
    */
@@ -128,9 +128,9 @@ export class SignedByAgent {
    * Start the enrollment watcher.
    *
    * Per Bible Gates 1-3:
-   * 1. Watches for kind 28200 (open session) → notifies human to enter challenge code
-   * 2. Watches for kind 28200 (addressed) → waits for human to sign kind 28250
-   * 3. Detects kind 28250 → calls /v1/membership/enroll/commit
+   * 1. Watches for kind 38200 (open session) → notifies human to enter challenge code
+   * 2. Watches for kind 38200 (addressed) → waits for human to sign kind 38250
+   * 3. Detects kind 38250 → calls /v1/membership/enroll/commit
    *
    * When Gate 1 callback fires, call submitChallengeCode() with the code from the screen.
    *
@@ -171,7 +171,7 @@ export class SignedByAgent {
 
             switch (event.type) {
               case 1: // Gate 1 responding
-                onGateComplete?.(1, 'Published kind 28202 enrollment response');
+                onGateComplete?.(1, 'Published kind 38202 enrollment response');
                 break;
               case 2: // Gate 2 received
                 onGateComplete?.(2, 'Received authorization or delegation event');
@@ -198,7 +198,7 @@ export class SignedByAgent {
   }
 
   /**
-   * Get recent agent activity (kinds 28101, 28102, 28103).
+   * Get recent agent activity (kinds 38101, 38102, 38103).
    *
    * @param limit - Maximum number of events to return
    * @returns List of activity events
