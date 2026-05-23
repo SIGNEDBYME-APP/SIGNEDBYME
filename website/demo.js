@@ -171,6 +171,10 @@ function goToStep(step) {
         generateUnsignedDelegation();
     }
     
+    if (step === 5) {
+        handleGate3Enrollment();
+    }
+    
     // Log to feed
     addFeedEvent(`Step ${step} started`, 'info');
 }
@@ -430,6 +434,47 @@ async function handleSignedEventSubmit() {
             errorEl.style.display = 'block';
         }
         addFeedEvent(`❌ Gate 2 failed: ${err.message}`, 'error');
+    }
+}
+
+async function handleGate3Enrollment() {
+    // Call gate3-complete to perform Merkle enrollment
+    try {
+        addFeedEvent('🌳 Starting Merkle enrollment...', 'info');
+        
+        const response = await fetch(`${DEMO_API_URL}/v1/demo/gate3-complete/${sessionId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+        });
+        
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.detail || `Enrollment failed: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Update UI
+        const leafCommitEl = document.getElementById('leaf-commitment');
+        const leafIndexEl = document.getElementById('leaf-index');
+        const merkleRootEl = document.getElementById('merkle-root-display');
+        
+        if (leafCommitEl) leafCommitEl.textContent = `0x${data.merkle_root.slice(0, 8)}...`;
+        if (leafIndexEl) leafIndexEl.textContent = data.leaf_index;
+        if (merkleRootEl) merkleRootEl.textContent = `0x${data.merkle_root.slice(0, 16)}...`;
+        
+        // Show success
+        const enrollingEl = document.getElementById('enrolling');
+        const successEl = document.getElementById('gate3-success');
+        if (enrollingEl) enrollingEl.style.display = 'none';
+        if (successEl) successEl.style.display = 'block';
+        
+        addFeedEvent(`🌳 Enrolled at leaf index ${data.leaf_index}`, 'success');
+        addFeedEvent('✓ Gate 3: Merkle enrollment complete', 'success');
+        
+    } catch (err) {
+        console.error('Gate 3 error:', err);
+        addFeedEvent(`❌ Enrollment failed: ${err.message}`, 'error');
     }
 }
 
