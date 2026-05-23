@@ -458,7 +458,7 @@ async function handleEnrollment() {
             
             const data = await response.json();
             
-            if (data.completed || data.current_gate >= 4) {
+            if (data.completed || data.current_gate >= 3) {
                 // Enrollment complete!
                 addFeedEvent('✓ Merkle tree updated', 'success');
                 addFeedEvent('✓ Gate 3: Enrollment complete', 'success');
