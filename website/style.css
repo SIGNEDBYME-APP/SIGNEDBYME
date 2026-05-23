@@ -1412,8 +1412,10 @@ code {
 .pricing-split {
     display: flex;
     justify-content: center;
+    align-items: stretch;
     gap: var(--space-lg);
     margin-bottom: var(--space-xl);
+    width: 100%;
 }
 
 @media (max-width: 768px) {
@@ -1484,14 +1486,16 @@ code {
 
 /* Pricing Benefits */
 .pricing-benefits {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    display: flex;
+    justify-content: center;
     gap: var(--space-md);
+    width: 100%;
 }
 
 @media (max-width: 768px) {
     .pricing-benefits {
-        grid-template-columns: 1fr;
+        flex-direction: column;
+        align-items: center;
     }
 }
 
@@ -1501,6 +1505,8 @@ code {
     border-radius: 8px;
     padding: var(--space-md);
     text-align: center;
+    flex: 0 1 280px;
+    max-width: 320px;
 }
 
 .benefit-item h4 {
