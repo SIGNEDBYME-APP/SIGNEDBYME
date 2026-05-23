@@ -623,61 +623,6 @@ def gate2_complete(session_id: str, body: Gate2CompleteRequest):
     )
 
 
-class Gate3CompleteResponse(BaseModel):
-    """Gate 3 completion response."""
-    status: str
-    leaf_index: int
-    merkle_root: str
-    message: str
-
-
-@router.post("/gate3-complete/{session_id}", response_model=Gate3CompleteResponse)
-def gate3_complete(session_id: str):
-    """
-    Gate 3: Merkle enrollment.
-
-    Enrolls the agent in the membership tree.
-    For demo: simulates enrollment with mock data.
-    """
-    if session_id not in _sessions:
-        raise HTTPException(404, "Session not found")
-
-    session = _sessions[session_id]
-
-    # Check we're at gate 3
-    if session.get("current_gate", 0) != 3:
-        raise HTTPException(400, f"Invalid gate: {session.get('current_gate')}. Must be at gate 3.")
-
-    # Generate mock leaf commitment (in production, this comes from agent's leaf_secret)
-    agent_npub = session.get("agent_npub", "")
-    mock_leaf_commitment = hashlib.sha256(f"leaf:{agent_npub}:{session_id}".encode()).hexdigest()
-
-    # Mock enrollment result (in production, calls /v1/membership/enroll/commit)
-    mock_leaf_index = 0
-    mock_merkle_root = hashlib.sha256(f"root:{mock_leaf_commitment}".encode()).hexdigest()
-
-    # Update session
-    session["current_gate"] = 4
-    session["leaf_commitment"] = mock_leaf_commitment
-    session["leaf_index"] = mock_leaf_index
-    session["merkle_root"] = mock_merkle_root
-    session["events"].append({
-        "type": "enrollment",
-        "leaf_index": mock_leaf_index,
-        "merkle_root": mock_merkle_root[:16] + "...",
-        "time": datetime.utcnow().isoformat(),
-    })
-
-    logger.info(f"Gate 3 complete: {session_id}, leaf_index: {mock_leaf_index}")
-
-    return Gate3CompleteResponse(
-        status="gate3_complete",
-        leaf_index=mock_leaf_index,
-        merkle_root=mock_merkle_root,
-        message="Enrollment complete. Agent added to membership tree.",
-    )
-
-
 @router.get("/status/{session_id}", response_model=DemoStatusResponse)
 def demo_status(session_id: str):
     """Poll for demo flow progress."""
@@ -712,9 +657,9 @@ def demo_verify(session_id: str):
 
     session = _sessions[session_id]
 
-    # Check we're at the right gate (must have completed enrollment)
-    if session.get("current_gate", 0) < 4:
-        raise HTTPException(400, "Flow not complete. Must complete Gates 1-3 (including enrollment) first.")
+    # Check we're at the right gate
+    if session.get("current_gate", 0) < 3:
+        raise HTTPException(400, "Flow not complete. Must complete Gates 1-3 first.")
 
     # Mark as complete
     session["current_gate"] = 4
