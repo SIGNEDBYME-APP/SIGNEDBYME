@@ -333,7 +333,7 @@ token = await client.login(
         <div class="container">
             <h2>For Enterprises</h2>
             <p class="section-intro">
-                Add "Sign in with <span class="brand-name">SIGNEDBYME</span>" and receive <strong>standard OIDC id_tokens</strong>, 
+                Add "Authorize your Agent with <span class="brand-name">SIGNEDBYME</span>" and receive <strong>standard OIDC id_tokens</strong>, 
                 the same format you already use with Okta, Auth0, or Google. 
                 Your existing IAM policies work unchanged. <span class="brand-name">SIGNEDBYME</span> just handles 
                 the "who is this?" question cryptographically. 
@@ -446,7 +446,7 @@ token = await client.login(
             
             <div class="download-box">
                 <div class="download-info">
-                    <h3>signedby-sdk-v1.0.1</h3>
+                    <h3>signedby-sdk-v0.1.0-beta.23</h3>
                     <p class="download-meta">
                         Latest release · Native SDK with Groth16 prover
                     </p>
@@ -470,8 +470,8 @@ token = await client.login(
         <div class="container">
             <h2>Try <span class="brand-name">SIGNEDBYME</span> Live</h2>
             <p class="section-intro">
-                Experience the full agent authorization flow. 
-                Your agent will be authorized to access our demo enterprise.
+                Test against our live production environment — the same infrastructure that powers real deployments. 
+                No sandbox. No simulation (except payment). Real ZK proofs on real relays.
             </p>
             
             <div id="demo-container" class="demo-wizard">
@@ -486,7 +486,7 @@ token = await client.login(
                             <ul>
                                 <li>SIGNEDBYME SDK running on your device</li>
                                 <li>A NOSTR client for signing (NIP-07 extension like Alby or nos2x)</li>
-                                <li>A NIP-05 verified identity (e.g., you@primal.net, you@getalby.com)</li>
+                                <li>Any email address for demo login (no account required)</li>
                             </ul>
                         </div>
                         
@@ -857,6 +857,25 @@ token = await client.login(
             document.querySelector('.nav-links').classList.remove('nav-open');
         });
     });
+    </script>
+    
+    <!-- Scroll restore: remember position when visiting docs -->
+    <script>
+    (function() {
+        // On page load: restore scroll if returning from docs
+        const savedScroll = sessionStorage.getItem('sbm_scroll');
+        if (savedScroll && document.referrer.includes('/docs/')) {
+            window.scrollTo(0, parseInt(savedScroll, 10));
+            sessionStorage.removeItem('sbm_scroll');
+        }
+        
+        // On doc link click: save scroll position
+        document.querySelectorAll('a[href^="docs/"]').forEach(link => {
+            link.addEventListener('click', () => {
+                sessionStorage.setItem('sbm_scroll', window.scrollY.toString());
+            });
+        });
+    })();
     </script>
 </body>
 </html>
