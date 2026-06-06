@@ -15,8 +15,8 @@ license terminate.
 
 “Licensor” means Privacy Lion LLC (d/b/a SIGNEDBYME).
 
-“Licensed Work” means all source code, build scripts, configuration, and other
-materials included in this repository, including iOS, Android, and API/server code.
+“Licensed Work” means all source code, build scripts, configuration, SDK libraries, and other
+materials included in this repository, including API/server code and client SDK.
 
 “Derivative Work” means any work based on or derived from the Licensed Work.
 
